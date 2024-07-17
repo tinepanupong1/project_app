@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:project_app/component/my_button.dart';
 import 'package:project_app/component/my_textfield.dart';
-import 'package:project_app/screen/homescreen.dart';
+import 'package:project_app/screen/loginscreen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class SignUpScreen extends StatefulWidget {
