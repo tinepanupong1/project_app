@@ -13,6 +13,12 @@ class HomeScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
+        title: const Text('Meal Master'),
+        titleTextStyle: const TextStyle(
+              fontFamily: 'Jua',
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color:textColorTitle,),
         actions: [
           IconButton(
             icon: const Icon(Icons.notifications, color: backgroundPink),
@@ -170,7 +176,7 @@ class GoalCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: backgroundBlue,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
                       //เงา
@@ -185,7 +191,7 @@ class GoalCard extends StatelessWidget {
         children: [
           Image(image: AssetImage('assets/images/G.png'),height: 50,),
           SizedBox(height: 10),
-          Text('Goal', style: TextStyle(fontSize: 16, color: Colors.white)),
+          Text('Goal', style: TextStyle(fontSize: 16, color: backgroundBlue)),
         ],
       ),
     );
@@ -198,7 +204,7 @@ class FoodDiaryCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.orange,
+        color: backgroundBlue,
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
@@ -218,14 +224,13 @@ class FoodDiaryCard extends StatelessWidget {
     );
   }
 }
-
 class MenuPlanningCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: backgroundYellow,
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
@@ -237,10 +242,27 @@ class MenuPlanningCard extends StatelessWidget {
       ),
       child: Row(
         children: [
+        
+          Image.asset(
+            'assets/images/healthy.png', 
+            width: 100, 
+            height: 100,
+            fit: BoxFit.cover,
+          ),
           const SizedBox(width: 16),
+          
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              const Text(
+                'Menu Planning',
+                style: TextStyle(
+                  color: backgroundHead, // สีของข้อความ
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
               Container(
                 padding: const EdgeInsets.symmetric(
                     vertical: 4.0, horizontal: 8.0),
@@ -249,14 +271,19 @@ class MenuPlanningCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Text(
-                  'มื้อเที่ยงวันนี้',
-                  style: TextStyle(fontSize: 12, color: Colors.white),
+                  'มื้อเที่ยงวันนี้', //รอเอาจากวางแผนเมนูแต่ละมื้อ
+                  style: TextStyle(
+                    color: backgroundYellow, 
+                    fontSize: 14,
+                  ),
                 ),
               ),
               const SizedBox(height: 8),
               const Text(
-                'ก๋วยเตี๋ยวต้มยำ',
-                style: TextStyle(fontSize: 16, color: Colors.black),
+                'ก๋วยเตี๋ยวต้มยำ',//รอเอาจากวางแผนเมนูแต่ละมื้อ
+                style: TextStyle(
+                  color: Colors.white,
+                ),
               ),
             ],
           ),
