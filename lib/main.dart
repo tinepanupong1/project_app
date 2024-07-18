@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:project_app/screen/homescreen.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -33,7 +34,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primaryColor: Colors.blue,
       ),
-      home : const HomeScreen1(),
+      home : const HomeScreen(),
     );
   }
 }

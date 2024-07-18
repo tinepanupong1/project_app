@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:project_app/component/my_button.dart';
 import 'package:project_app/component/my_textfield.dart';
 import 'package:project_app/screen/loginscreen.dart';
@@ -64,90 +63,85 @@ class _SignUpScreenState extends State<SignUpScreen> {
     return Scaffold(
       backgroundColor: Colors.black,
       body: Padding(
-    padding: const EdgeInsets.only(top: 100.0), 
-      child: Container(
-       
-        child: Form(
-          child: Column(
-            children: [
-              
+        padding: const EdgeInsets.only(top: 100.0),
+        child: Container(
+          child: Form(
+            child: Column(
+              children: [
                 Center(
-            child: Image.asset('assets/images/food.png', width: 200),
-          ),
-              const SizedBox(
-                height: 60,
-              ),
-              MyTextField(
-                  controller: nameController,
-                  hintText: 'Enter your name.',
-                  obscureText: false,
-                  labelText: ''),
-                  
-              const SizedBox(
-                height: 20,
-              ),
-              MyTextField(
-                  controller: emailController,
-                  hintText: 'Enter your Email.',
-                  obscureText: false,
-                  labelText: ''),
-              const SizedBox(
-                height: 20,
-              ),
-              MyTextField(
-                  controller: passwordController,
-                  hintText: 'Enter your password.',
-                  obscureText: true,
-                  labelText: ''),
-              const SizedBox(
-                height: 20,
-              ),
-              MyTextField(
-                  controller: repasswordController,
-                  hintText: 'Enter your password again.',
-                  obscureText: true,
-                  labelText: ''),
-              const SizedBox(
-                height: 20,
-              ),
-              MyButton(onTap: signUpWithEmail, hintText: "Sign up"),
-              const SizedBox(
-                height: 20,
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  
-                  const SizedBox(
-                    width: 2,
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => HomeScreen1(),
-                          ));
-                    },
-                
-                    child: Text(
-                      'Already have an account? Sign in.',
-                      style: GoogleFonts.lato(
-                        textStyle: Theme.of(context).textTheme.displaySmall,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        fontStyle: FontStyle.italic,
-                        color: const Color.fromARGB(255, 255, 0, 0),
+                  child: Image.asset('assets/images/food.png', width: 200),
+                ),
+                const SizedBox(
+                  height: 60,
+                ),
+                MyTextField(
+                    controller: nameController,
+                    hintText: 'Enter your name.',
+                    obscureText: false,
+                    labelText: ''),
+                const SizedBox(
+                  height: 20,
+                ),
+                MyTextField(
+                    controller: emailController,
+                    hintText: 'Enter your Email.',
+                    obscureText: false,
+                    labelText: ''),
+                const SizedBox(
+                  height: 20,
+                ),
+                MyTextField(
+                    controller: passwordController,
+                    hintText: 'Enter your password.',
+                    obscureText: true,
+                    labelText: ''),
+                const SizedBox(
+                  height: 20,
+                ),
+                MyTextField(
+                    controller: repasswordController,
+                    hintText: 'Enter your password again.',
+                    obscureText: true,
+                    labelText: ''),
+                const SizedBox(
+                  height: 20,
+                ),
+                MyButton(onTap: signUpWithEmail, hintText: "Sign up"),
+                const SizedBox(
+                  height: 20,
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const SizedBox(
+                      width: 2,
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => HomeScreen1(),
+                            ));
+                      },
+                      child: Text(
+                        'Already have an account? Sign in.',
+                        style: TextStyle(
+                          fontFamily: 'GoblinOne',
+                          fontSize: 16.0,
+                          fontWeight: FontWeight.w700,
+                          fontStyle: FontStyle.italic,
+                          color: const Color.fromARGB(255, 255, 0, 0),
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-              
-            ],
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
-    ),);
+    );
   }
 }
