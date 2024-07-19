@@ -16,9 +16,10 @@ class MyTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 25.0),
-
+    return Center(
+      child: Container(
+        width: 150, // กำหนดความกว้างที่ต้องการให้สั้นลง
+        padding: const EdgeInsets.symmetric(horizontal: 25.0),
         child: TextFormField(
           controller: controller,
           obscureText: obscureText,
@@ -48,7 +49,7 @@ class MyTextField extends StatelessWidget {
             ),
           ),
         ),
-      )
-    ;
+      ),
+    );
   }
 }

@@ -5,7 +5,7 @@ import 'package:project_app/screen/loginscreen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class SignUpScreen extends StatefulWidget {
-  SignUpScreen({super.key});
+  const SignUpScreen({super.key});
 
   @override
   State<SignUpScreen> createState() => _SignUpScreenState();
@@ -13,11 +13,8 @@ class SignUpScreen extends StatefulWidget {
 
 class _SignUpScreenState extends State<SignUpScreen> {
   final nameController = TextEditingController();
-
   final emailController = TextEditingController();
-
   final passwordController = TextEditingController();
-
   final repasswordController = TextEditingController();
 
   signUpWithEmail() async {
@@ -37,22 +34,20 @@ class _SignUpScreenState extends State<SignUpScreen> {
     return showDialog(
       context: context,
       builder: (BuildContext context) {
-        return Expanded(
-          child: AlertDialog(
-            backgroundColor: Color.fromARGB(255, 73, 194, 255),
-            title: const Text('AlertDialog Title'),
-            content: Text(txtMsg),
-            actions: <Widget>[
-              TextButton(
-                onPressed: () => Navigator.pop(context, 'Cancel'),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, 'OK'),
-                child: const Text('OK'),
-              ),
-            ],
-          ),
+        return AlertDialog(
+          backgroundColor: const Color.fromARGB(255, 73, 194, 255),
+          title: const Text('AlertDialog Title'),
+          content: Text(txtMsg),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.pop(context, 'Cancel'),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, 'OK'),
+              child: const Text('OK'),
+            ),
+          ],
         );
       },
     );
@@ -61,83 +56,174 @@ class _SignUpScreenState extends State<SignUpScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
-      body: Padding(
-        padding: const EdgeInsets.only(top: 100.0),
-        child: Container(
-          child: Form(
-            child: Column(
-              children: [
-                Center(
-                  child: Image.asset('assets/images/food.png', width: 200),
+      backgroundColor: const Color(0xFFFFF7E8),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Align(
+                alignment: Alignment.topLeft,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: RichText(
+                    text: const TextSpan(
+                      children: [
+                        TextSpan(
+                          text: 'Meal\n',
+                          style: TextStyle(
+                            fontFamily: 'GoblinOne',
+                            fontSize: 36.0,
+                            fontWeight: FontWeight.bold,
+                            color: Color.fromRGBO(173, 212, 149, 1) ,
+                          ),
+                        ),
+                        TextSpan(
+                          text: 'Master',
+                          style: TextStyle(
+                            fontFamily: 'GoblinOne',
+                            fontSize: 36.0,
+                            fontWeight: FontWeight.bold,
+                            color: Color.fromRGBO(173, 212, 149, 1) ,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-                const SizedBox(
-                  height: 60,
-                ),
-                MyTextField(
-                    controller: nameController,
-                    hintText: 'Enter your name.',
-                    obscureText: false,
-                    labelText: ''),
-                const SizedBox(
-                  height: 20,
-                ),
-                MyTextField(
-                    controller: emailController,
-                    hintText: 'Enter your Email.',
-                    obscureText: false,
-                    labelText: ''),
-                const SizedBox(
-                  height: 20,
-                ),
-                MyTextField(
-                    controller: passwordController,
-                    hintText: 'Enter your password.',
-                    obscureText: true,
-                    labelText: ''),
-                const SizedBox(
-                  height: 20,
-                ),
-                MyTextField(
-                    controller: repasswordController,
-                    hintText: 'Enter your password again.',
-                    obscureText: true,
-                    labelText: ''),
-                const SizedBox(
-                  height: 20,
-                ),
-                MyButton(onTap: signUpWithEmail, hintText: "Sign up"),
-                const SizedBox(
-                  height: 20,
-                ),
-                Row(
+              ),
+              const SizedBox(height: 10),
+              const Center(
+                child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const SizedBox(
-                      width: 2,
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => HomeScreen1(),
-                            ));
-                      },
-                      child: Text(
-                        'Already have an account? Sign in.',
-                        style: TextStyle(
-                          fontFamily: 'GoblinOne',
-                          fontSize: 16.0,
-                          fontWeight: FontWeight.w700,
-                          fontStyle: FontStyle.italic,
-                          color: const Color.fromARGB(255, 255, 0, 0),
-                        ),
+                    Text(
+                      'Register...',
+                      style: TextStyle(
+                        fontFamily: 'Jua',
+                        fontSize: 24,
+                        color: Color.fromRGBO(42, 80, 90, 1),
                       ),
+                    ),
+                    SizedBox(width: 10),
+                    CircleAvatar(
+                      radius: 100, // ปรับขนาดรูปภาพให้ใหญ่ขึ้น
+                      backgroundImage: AssetImage('assets/images/food2.png'),
+                      backgroundColor: Colors.transparent, // ตั้งค่า backgroundColor ให้เป็นโปร่งใส
                     ),
                   ],
                 ),
-              ],
+              ),
+              const SizedBox(height: 20),
+              Center(
+                child: Container(
+                  width: 300, // ปรับขนาดความกว้างให้แคบลง
+                  height: 340, // ปรับขนาดความสูงตามต้องการ
+                  padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 16.0), // เพิ่ม padding ให้ด้านบนและด้านล่าง
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFC107),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Colors.black26,
+                        offset: Offset(0, 4),
+                        blurRadius: 10,
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 25), // เพิ่มพื้นที่ว่างด้านบน
+                      MyTextField(
+                        controller: nameController,
+                        hintText: 'Name',
+                        obscureText: false,
+                        labelText: 'Name',
+                      ),
+                      const SizedBox(height: 20),
+                      MyTextField(
+                        controller: emailController,
+                        hintText: 'E-mail',
+                        obscureText: false,
+                        labelText: 'Email',
+                      ),
+                      const SizedBox(height: 20),
+                      MyTextField(
+                        controller: passwordController,
+                        hintText: 'Create password',
+                        obscureText: true,
+                        labelText: 'Password',
+                      ),
+                      const SizedBox(height: 20),
+                      MyTextField(
+                        controller: repasswordController,
+                        hintText: 'Repeat your password',
+                        obscureText: true,
+                        labelText: 'Confirm Password',
+                      ),
+                      const SizedBox(height: 20), // เพิ่มพื้นที่ว่างด้านล่าง
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Center(
+                child: ElevatedButton(
+                  onPressed: signUpWithEmail,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.redAccent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8.0), // ปรับให้เป็นสี่เหลี่ยม
+                    ),
+                    side: const BorderSide(color: Colors.white, width: 4.0),
+                    padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 20),
+                  ),
+                  child: const Icon(
+                    Icons.arrow_forward,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class MyTextField extends StatelessWidget {
+  final TextEditingController controller;
+  final String hintText;
+  final bool obscureText;
+  final String labelText;
+
+  const MyTextField({
+    Key? key,
+    required this.controller,
+    required this.hintText,
+    required this.obscureText,
+    required this.labelText,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        width: 270, // ปรับขนาดความกว้างให้สั้นลง
+        child: TextField(
+          controller: controller,
+          obscureText: obscureText,
+          decoration: InputDecoration(
+            hintText: hintText,
+            labelText: labelText,
+            fillColor: Colors.white,
+            filled: true,
+            contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(30),
+              borderSide: BorderSide.none,
             ),
           ),
         ),
