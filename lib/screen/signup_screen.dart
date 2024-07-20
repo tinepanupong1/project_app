@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:project_app/component/my_button.dart';
-import 'package:project_app/component/my_textfield.dart';
 import 'package:project_app/screen/loginscreen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -122,7 +121,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   height: 340, // ปรับขนาดความสูงตามต้องการ
                   padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 16.0), // เพิ่ม padding ให้ด้านบนและด้านล่าง
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFFC107),
+                    color: const Color.fromRGBO(255, 197, 66, 1),
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: const [
                       BoxShadow(
@@ -138,28 +137,26 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       MyTextField(
                         controller: nameController,
                         hintText: 'Name',
-                        obscureText: false,
                         labelText: 'Name',
+                        obscureText: false,
                       ),
                       const SizedBox(height: 20),
                       MyTextField(
                         controller: emailController,
                         hintText: 'E-mail',
-                        obscureText: false,
                         labelText: 'Email',
+                        obscureText: false,
                       ),
                       const SizedBox(height: 20),
-                      MyTextField(
+                      PasswordTextField(
                         controller: passwordController,
                         hintText: 'Create password',
-                        obscureText: true,
                         labelText: 'Password',
                       ),
                       const SizedBox(height: 20),
-                      MyTextField(
+                      PasswordTextField(
                         controller: repasswordController,
                         hintText: 'Repeat your password',
-                        obscureText: true,
                         labelText: 'Confirm Password',
                       ),
                       const SizedBox(height: 20), // เพิ่มพื้นที่ว่างด้านล่าง
@@ -224,6 +221,63 @@ class MyTextField extends StatelessWidget {
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(30),
               borderSide: BorderSide.none,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class PasswordTextField extends StatefulWidget {
+  const PasswordTextField({
+    Key? key,
+    required this.controller,
+    required this.hintText,
+    required this.labelText,
+  }) : super(key: key);
+
+  final TextEditingController controller;
+  final String hintText;
+  final String labelText;
+
+  @override
+  _PasswordTextFieldState createState() => _PasswordTextFieldState();
+}
+
+class _PasswordTextFieldState extends State<PasswordTextField> {
+  bool _obscureText = true;
+
+  void _toggleObscureText() {
+    setState(() {
+      _obscureText = !_obscureText;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        width: 270, // ปรับขนาดความกว้างให้สั้นลง
+        child: TextField(
+          controller: widget.controller,
+          obscureText: _obscureText,
+          decoration: InputDecoration(
+            hintText: widget.hintText,
+            labelText: widget.labelText,
+            fillColor: Colors.white,
+            filled: true,
+            contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(30),
+              borderSide: BorderSide.none,
+            ),
+            suffixIcon: GestureDetector(
+              onTap: _toggleObscureText,
+              child: Icon(
+                _obscureText ? Icons.visibility_off : Icons.visibility,
+                color: Colors.grey,
+              ),
             ),
           ),
         ),

@@ -13,6 +13,7 @@ class _LoginScreenState extends State<LoginScreen> {
   // Text Editing Controllers
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
+  bool _obscureText = true;
 
   // Sign In with Email method
   signInWithEmail() async {
@@ -37,27 +38,27 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFFFF7E8), // เปลี่ยนสีพื้นหลังให้ตรงกับภาพ
+      backgroundColor: const Color(0xFFFFF7E8),
       body: Center(
-        child: SingleChildScrollView( // ใช้ SingleChildScrollView เพื่อให้หน้าจอเลื่อนเมื่อมีเนื้อหาเกินขนาด
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Align(
-                alignment: Alignment.topLeft, // จัดตำแหน่งให้เป็นซ้ายบน
+                alignment: Alignment.topLeft,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0), // เพิ่ม padding ด้านซ้ายและขวา
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: RichText(
                     text: const TextSpan(
                       children: [
                         TextSpan(
-                          text: 'Meal\n', // เพิ่ม \n เพื่อให้ "Master" อยู่บรรทัดถัดไป
+                          text: 'Meal\n',
                           style: TextStyle(
                             fontFamily: 'GoblinOne',
                             fontSize: 36.0,
                             fontWeight: FontWeight.bold,
-                            color: Color.fromRGBO(173, 212, 149, 1) // ปรับสีตามภาพ
+                            color: Color.fromRGBO(173, 212, 149, 1),
                           ),
                         ),
                         TextSpan(
@@ -66,7 +67,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             fontFamily: 'GoblinOne',
                             fontSize: 36.0,
                             fontWeight: FontWeight.bold,
-                            color: Color.fromRGBO(173, 212, 149, 1), // ปรับสีตามภาพ
+                            color: Color.fromRGBO(173, 212, 149, 1),
                           ),
                         ),
                       ],
@@ -74,12 +75,12 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 20), // เพิ่มช่องว่างระหว่างส่วนต่างๆ
+              const SizedBox(height: 20),
               const Center(
                 child: CircleAvatar(
-                  radius: 120, // ปรับขนาดรูปภาพให้ใหญ่ขึ้น
+                  radius: 120,
                   backgroundImage: AssetImage('assets/images/food1.png'),
-                  backgroundColor: Colors.transparent, // ตั้งค่า backgroundColor ให้เป็นสีโปร่งใส
+                  backgroundColor: Colors.transparent,
                 ),
               ),
               const SizedBox(height: 20),
@@ -88,41 +89,53 @@ class _LoginScreenState extends State<LoginScreen> {
                 style: TextStyle(
                   fontFamily: 'Jua',
                   fontSize: 24,
-                  color: Color.fromARGB(255, 42, 80, 90), // เปลี่ยนสีของข้อความ
+                  color: Color.fromARGB(255, 42, 80, 90),
                 ),
               ),
               const SizedBox(height: 20),
               Container(
-                width: 300, // ตั้งค่าความกว้างของ Container
+                width: 300,
                 child: TextField(
                   controller: emailController,
                   decoration: InputDecoration(
                     hintText: "E-mail",
                     filled: true,
-                    fillColor: Colors.white, // เปลี่ยนสีพื้นหลังของ TextField
+                    fillColor: Colors.white,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(30.0),
                       borderSide: BorderSide.none,
                     ),
-                    contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 30), // ปรับขนาด padding
+                    contentPadding: const EdgeInsets.symmetric(
+                        vertical: 10, horizontal: 30),
                   ),
                 ),
               ),
               const SizedBox(height: 20),
               Container(
-                width: 300, // ตั้งค่าความกว้างของ Container
+                width: 300,
                 child: TextField(
                   controller: passwordController,
-                  obscureText: true,
+                  obscureText: _obscureText,
                   decoration: InputDecoration(
                     hintText: "Password",
                     filled: true,
-                    fillColor: Colors.white, // เปลี่ยนสีพื้นหลังของ TextField
+                    fillColor: Colors.white,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(30.0),
                       borderSide: BorderSide.none,
                     ),
-                    contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 30), // ปรับขนาด padding
+                    contentPadding: const EdgeInsets.symmetric(
+                        vertical: 10, horizontal: 30),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscureText ? Icons.visibility_off : Icons.visibility,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _obscureText = !_obscureText;
+                        });
+                      },
+                    ),
                   ),
                 ),
               ),
@@ -134,15 +147,16 @@ class _LoginScreenState extends State<LoginScreen> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(30.0),
                   ),
-                  side: BorderSide(color: Colors.white, width: 2.0),
-                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10), // ปรับความสูงของปุ่ม
-                  minimumSize: Size(10, 30), // ปรับขนาดขั้นต่ำของปุ่ม
+                  side: const BorderSide(color: Colors.white, width: 2.0),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 20, vertical: 10),
+                  minimumSize: const Size(10, 30),
                 ),
                 child: const Text(
                   'Login',
                   style: TextStyle(
                     fontFamily: 'Jua',
-                    fontSize: 30, // ปรับขนาดตัวอักษรให้ใหญ่ขึ้น
+                    fontSize: 30,
                     color: Colors.white,
                   ),
                 ),
@@ -170,7 +184,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   "Or Register",
                   style: TextStyle(
                     fontFamily: 'Jua',
-                    fontSize: 24, // ปรับขนาดให้สอดคล้องกับภาพ
+                    fontSize: 24,
                     fontWeight: FontWeight.w400,
                     fontStyle: FontStyle.normal,
                     color: Colors.black,

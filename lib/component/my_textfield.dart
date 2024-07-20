@@ -1,51 +1,54 @@
 import 'package:flutter/material.dart';
 
-class MyTextField extends StatelessWidget {
+class MyTextField extends StatefulWidget {
   const MyTextField({
-    super.key,
+    Key? key,
     required this.controller,
     required this.hintText,
-    required this.obscureText,
     required this.labelText,
-  });
+  }) : super(key: key);
 
-  final controller;
+  final TextEditingController controller;
   final String hintText;
-  final bool obscureText;
   final String labelText;
+
+  @override
+  _MyTextFieldState createState() => _MyTextFieldState();
+}
+
+class _MyTextFieldState extends State<MyTextField> {
+  bool _obscureText = true;
+
+  void _toggleObscureText() {
+    setState(() {
+      _obscureText = !_obscureText;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Center(
       child: Container(
-        width: 150, // กำหนดความกว้างที่ต้องการให้สั้นลง
-        padding: const EdgeInsets.symmetric(horizontal: 25.0),
-        child: TextFormField(
-          controller: controller,
-          obscureText: obscureText,
+        width: 270, // ปรับขนาดความกว้างให้สั้นลง
+        child: TextField(
+          controller: widget.controller,
+          obscureText: _obscureText,
           decoration: InputDecoration(
-            labelText: labelText,
-            hintText: hintText,
-            floatingLabelBehavior: FloatingLabelBehavior.always,
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 30, vertical: 10),
+            hintText: widget.hintText,
+            labelText: widget.labelText,
+            fillColor: Colors.white,
             filled: true,
-            fillColor: Colors.grey,
-            enabledBorder: const OutlineInputBorder(
-              borderSide: BorderSide(color: Color.fromARGB(255, 0, 0, 0)),
-              borderRadius: BorderRadius.zero,
-              gapPadding: 10,
+            contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(30),
+              borderSide: BorderSide.none,
             ),
-            focusedBorder: const OutlineInputBorder(
-              borderRadius: BorderRadius.zero,
-              borderSide: BorderSide(color: Color.fromARGB(255, 255, 255, 255)),
-              gapPadding: 10,
-            ),
-            labelStyle: const TextStyle(
-              color: Color.fromARGB(255, 0, 0, 0),
-            ),
-            hintStyle: const TextStyle(
-              color: Color.fromARGB(255, 0, 0, 0),
+            suffixIcon: GestureDetector(
+              onTap: _toggleObscureText,
+              child: Icon(
+                _obscureText ? Icons.visibility_off : Icons.visibility,
+                color: Colors.grey,
+              ),
             ),
           ),
         ),
