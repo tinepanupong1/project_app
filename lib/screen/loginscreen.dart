@@ -34,7 +34,7 @@ class _LoginScreenState extends State<LoginScreen> {
       print(e.message);
     }
   }
-
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
