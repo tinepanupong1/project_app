@@ -15,10 +15,11 @@ class HomeScreen extends StatelessWidget {
         elevation: 0,
         title: const Text('Meal Master'),
         titleTextStyle: const TextStyle(
-              fontFamily: 'Jua',
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              color:textColorTitle,),
+          fontFamily: 'Jua',
+          fontSize: 20,
+          fontWeight: FontWeight.w700,
+          color: textColorTitle,
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.notifications, color: backgroundPink),
@@ -26,7 +27,7 @@ class HomeScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
@@ -36,11 +37,11 @@ class HomeScreen extends StatelessWidget {
             GoalAndDiaryRow(),
             const SizedBox(height: 20),
             MenuPlanningCard(),
-            const Spacer(),
-            const BottomNavBar(),
+            const SizedBox(height: 30),
           ],
         ),
       ),
+      bottomNavigationBar: const BottomNavBar(),
     );
   }
 }
@@ -64,7 +65,6 @@ class _CalorieCardState extends State<CalorieCard> {
         color: backgroundHead,
         borderRadius: BorderRadius.circular(25),
         boxShadow: [
-          //เงา
           BoxShadow(
             color: Colors.black.withOpacity(0.8),
             blurRadius: 10.0,
@@ -83,14 +83,12 @@ class _CalorieCardState extends State<CalorieCard> {
               Icons.fastfood_sharp,
               size: 40.0,
               color: Colors.white,
-              
             ),
             progressColor: backgroundYellow,
             backgroundColor: backgroundHead2,
             circularStrokeCap: CircularStrokeCap.round,
             footer: Padding(
-              padding: const EdgeInsets.only(
-                  top: 16.0), // เพิ่มพื้นที่ว่างด้านบนของ footer
+              padding: const EdgeInsets.only(top: 16.0),
               child: Text(
                 '$totalCalories cal',
                 style: const TextStyle(
@@ -108,9 +106,10 @@ class _CalorieCardState extends State<CalorieCard> {
               const Text(
                 'ปริมาณแคลอรี่ในวันนี้',
                 style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold),
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 15),
               Row(
@@ -119,9 +118,7 @@ class _CalorieCardState extends State<CalorieCard> {
                     Icons.circle,
                     color: backgroundYellow,
                   ),
-                  const SizedBox(
-                    width: 5,
-                  ),
+                  const SizedBox(width: 5),
                   Text(
                     'ทานไปแล้ว $consumedCalories cal',
                     style: const TextStyle(color: Colors.white, fontSize: 16),
@@ -130,19 +127,19 @@ class _CalorieCardState extends State<CalorieCard> {
               ),
               const SizedBox(height: 20),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+                padding: const EdgeInsets.symmetric(
+                    vertical: 8.0, horizontal: 16.0),
                 decoration: BoxDecoration(
-                    color: backgroundPink,
-                    borderRadius: BorderRadius.circular(23),
-                    boxShadow: [
-                      //เงา
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.3),
-                        blurRadius: 10.0,
-                        offset: const Offset(0, 5),
-                      ),
-                    ]),
+                  color: backgroundPink,
+                  borderRadius: BorderRadius.circular(23),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.3),
+                      blurRadius: 10.0,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+                ),
                 child: Text(
                   'เหลือ $remainingCalories cal',
                   style: const TextStyle(color: Colors.white, fontSize: 14),
@@ -179,17 +176,19 @@ class GoalCard extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
-                      //เงา
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.3),
-                        blurRadius: 10.0,
-                        offset: const Offset(0, 5),
-                      ),
-                    ]
+          BoxShadow(
+            color: Colors.black.withOpacity(0.3),
+            blurRadius: 10.0,
+            offset: const Offset(0, 5),
+          ),
+        ],
       ),
       child: const Column(
         children: [
-          Image(image: AssetImage('assets/images/G.png'),height: 50,),
+          Image(
+            image: AssetImage('assets/images/G.png'),
+            height: 50,
+          ),
           SizedBox(height: 10),
           Text('Goal', style: TextStyle(fontSize: 16, color: backgroundBlue)),
         ],
@@ -215,15 +214,19 @@ class FoodDiaryCard extends StatelessWidget {
         ],
       ),
       child: const Column(
-        children: [Text('Food Diary', style: TextStyle(fontSize: 16, color: Colors.white)),
-          
+        children: [
+          Text('Food Diary', style: TextStyle(fontSize: 16, color: Colors.white)),
           SizedBox(height: 10),
-          Image(image: AssetImage("assets/images/FoodDiary.png"), height: 50,),
+          Image(
+            image: AssetImage("assets/images/FoodDiary.png"),
+            height: 50,
+          ),
         ],
       ),
     );
   }
 }
+
 class MenuPlanningCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -242,22 +245,20 @@ class MenuPlanningCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-        
           Image.asset(
-            'assets/images/healthy.png', 
-            width: 100, 
+            'assets/images/healthy.png',
+            width: 100,
             height: 100,
             fit: BoxFit.cover,
           ),
           const SizedBox(width: 16),
-          
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
                 'Menu Planning',
                 style: TextStyle(
-                  color: backgroundHead, // สีของข้อความ
+                  color: backgroundHead,
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
@@ -267,20 +268,20 @@ class MenuPlanningCard extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(
                     vertical: 4.0, horizontal: 8.0),
                 decoration: BoxDecoration(
-                  color: Colors.orangeAccent,
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Text(
-                  'มื้อเที่ยงวันนี้', //รอเอาจากวางแผนเมนูแต่ละมื้อ
+                  'มื้อเที่ยงวันนี้',
                   style: TextStyle(
-                    color: backgroundYellow, 
+                    color: backgroundYellow,
                     fontSize: 14,
                   ),
                 ),
               ),
               const SizedBox(height: 8),
               const Text(
-                'ก๋วยเตี๋ยวต้มยำ',//รอเอาจากวางแผนเมนูแต่ละมื้อ
+                'ก๋วยเตี๋ยวต้มยำ',
                 style: TextStyle(
                   color: Colors.white,
                 ),
