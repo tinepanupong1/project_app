@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:project_app/component/my_button.dart';
-import 'package:project_app/screen/loginscreen.dart';
+import 'package:project_app/screen/selectinfo.dart'; 
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // Import Firestore
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -18,14 +19,39 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   signUpWithEmail() async {
     try {
-      await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      // Create user with email and password
+      UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: emailController.text,
         password: passwordController.text,
       );
-      _showMyDialog('Sign up successfully!');
+
+      // Get the User UID
+      String uid = userCredential.user!.uid;
+
+      // Store additional user information in Firestore
+      await FirebaseFirestore.instance.collection('users').doc(uid).set({
+        'name': nameController.text,
+        'email': emailController.text,
+        'gender': null, // จะได้รับค่าในหน้า SelectInfoScreen
+        'age': null, // จะได้รับค่าในหน้า SelectInfoScreen
+        'weight': null, // จะได้รับค่าในหน้า SelectInfoScreen
+        'height': null, // จะได้รับค่าในหน้า SelectInfoScreen
+        'disease': null, // จะได้รับค่าในหน้า SelectInfoScreen
+        'allergies': null, // จะได้รับค่าในหน้า SelectInfoScreen
+      });
+
+      // Notify the user
+      _showMyDialog('สมัครสมาชิกสำเร็จ!');
+
+      // Navigate to the next screen
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => SelectInfoScreen()),
+      );
     } on FirebaseAuthException catch (e) {
       print('Failed with error code: ${e.code}');
       print(e.message);
+      _showMyDialog('เกิดข้อผิดพลาด: ${e.message}');
     }
   }
 
@@ -35,16 +61,16 @@ class _SignUpScreenState extends State<SignUpScreen> {
       builder: (BuildContext context) {
         return AlertDialog(
           backgroundColor: const Color.fromARGB(255, 73, 194, 255),
-          title: const Text('AlertDialog Title'),
+          title: const Text('แจ้งเตือน'),
           content: Text(txtMsg),
           actions: <Widget>[
             TextButton(
               onPressed: () => Navigator.pop(context, 'Cancel'),
-              child: const Text('Cancel'),
+              child: const Text('ยกเลิก'),
             ),
             TextButton(
               onPressed: () => Navigator.pop(context, 'OK'),
-              child: const Text('OK'),
+              child: const Text('ตกลง'),
             ),
           ],
         );
@@ -75,7 +101,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             fontFamily: 'GoblinOne',
                             fontSize: 36.0,
                             fontWeight: FontWeight.bold,
-                            color: Color.fromRGBO(173, 212, 149, 1) ,
+                            color: Color.fromRGBO(173, 212, 149, 1),
                           ),
                         ),
                         TextSpan(
@@ -84,7 +110,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             fontFamily: 'GoblinOne',
                             fontSize: 36.0,
                             fontWeight: FontWeight.bold,
-                            color: Color.fromRGBO(173, 212, 149, 1) ,
+                            color: Color.fromRGBO(173, 212, 149, 1),
                           ),
                         ),
                       ],
@@ -98,7 +124,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      'Register...',
+                      'Registor...',
                       style: TextStyle(
                         fontFamily: 'Jua',
                         fontSize: 24,
@@ -144,20 +170,20 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       MyTextField(
                         controller: emailController,
                         hintText: 'E-mail',
-                        labelText: 'Email',
+                        labelText: 'E-mail',
                         obscureText: false,
                       ),
                       const SizedBox(height: 20),
                       PasswordTextField(
                         controller: passwordController,
-                        hintText: 'Create password',
-                        labelText: 'Password',
+                        hintText: 'Password',
+                        labelText: 'Create password',
                       ),
                       const SizedBox(height: 20),
                       PasswordTextField(
                         controller: repasswordController,
-                        hintText: 'Repeat your password',
-                        labelText: 'Confirm Password',
+                        hintText: 'Confirm password',
+                        labelText: 'Repeat your password',
                       ),
                       const SizedBox(height: 20), // เพิ่มพื้นที่ว่างด้านล่าง
                     ],

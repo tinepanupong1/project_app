@@ -1,20 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:project_app/screen/loginscreen.dart'; // import หน้าจอ LoginScreen ของคุณ
 
 class SelectActivityScreen extends StatefulWidget {
+  final double bmr; // รับค่า BMR จากหน้าก่อนหน้า
+
+  SelectActivityScreen({required this.bmr});
+
   @override
   _SelectActivityScreenState createState() => _SelectActivityScreenState();
 }
 
 class _SelectActivityScreenState extends State<SelectActivityScreen> {
   String _selectedActivity = '';
+  double _activityFactor = 1.2; // ค่าตัวแปรเริ่มต้น
 
-  void _selectActivity(String activity) {
+  void _selectActivity(String activity, double factor) {
     setState(() {
       _selectedActivity = activity;
+      _activityFactor = factor; // ตั้งค่าค่าตัวแปรกิจกรรมตามที่เลือก
     });
   }
 
-  Widget _buildActivityButton(String text) {
+  Widget _buildActivityButton(String text, double factor) {
     bool isSelected = _selectedActivity == text;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -22,9 +31,11 @@ class _SelectActivityScreenState extends State<SelectActivityScreen> {
         width: 280, // กำหนดความกว้างคงที่ให้กับปุ่ม
         height: 60, // กำหนดความสูงคงที่ให้กับปุ่ม
         child: ElevatedButton(
-          onPressed: () => _selectActivity(text),
+          onPressed: () => _selectActivity(text, factor),
           style: ElevatedButton.styleFrom(
-            backgroundColor: isSelected ?  Color.fromARGB(255, 42, 80, 90) : const Color.fromRGBO(134, 192, 207, 1),
+            backgroundColor: isSelected
+                ? Color.fromARGB(255, 42, 80, 90)
+                : const Color.fromRGBO(134, 192, 207, 1),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
             ),
@@ -43,6 +54,20 @@ class _SelectActivityScreenState extends State<SelectActivityScreen> {
         ),
       ),
     );
+  }
+
+  double calculateTDEE(double bmr, double activityFactor) {
+    return bmr * activityFactor;
+  }
+
+  Future<void> saveTDEEToFirestore(double tdee) async {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      String uid = user.uid;
+      await FirebaseFirestore.instance.collection('users').doc(uid).update({
+        'tdee': tdee,
+      });
+    }
   }
 
   @override
@@ -71,16 +96,43 @@ class _SelectActivityScreenState extends State<SelectActivityScreen> {
                   height: 220,
                 ),
                 const SizedBox(height: 5), // ลดระยะห่างระหว่างภาพและกล่องกิจกรรม
-                _buildActivityButton('นั่งทำงานอยู่กับที่\nและไม่ได้ออกกำลังกายเลย'),
-                _buildActivityButton('ออกกำลังกายหรือเล่นกีฬาเล็กน้อย\nประมาณอาทิตย์ละ 1-3 วัน'),
-                _buildActivityButton('ออกกำลังกายหรือเล่นกีฬาปานกลาง\nประมาณอาทิตย์ละ 3-5 วัน'),
-                _buildActivityButton('ออกกำลังกายหรือเล่นกีฬาอย่างหนัก\nประมาณอาทิตย์ละ 6-7 วัน'),
-                _buildActivityButton('ออกกำลังกายหรือเล่นที่กีฬาอย่างหนักมากทุกวันเช้า และเย็น'),
+                _buildActivityButton('นั่งทำงานอยู่กับที่\nและไม่ได้ออกกำลังกายเลย', 1.2),
+                _buildActivityButton('ออกกำลังกายหรือเล่นกีฬาเล็กน้อย\nประมาณอาทิตย์ละ 1-3 วัน', 1.375),
+                _buildActivityButton('ออกกำลังกายหรือเล่นกีฬาปานกลาง\nประมาณอาทิตย์ละ 3-5 วัน', 1.55),
+                _buildActivityButton('ออกกำลังกายหรือเล่นกีฬาอย่างหนัก\nประมาณอาทิตย์ละ 6-7 วัน', 1.725),
+                _buildActivityButton('ออกกำลังกายหรือเล่นที่กีฬาอย่างหนักมากทุกวันเช้า และเย็น', 1.9),
                 const SizedBox(height: 10),
                 Center( // เพิ่ม Center widget รอบ ๆ ปุ่มสีแดง
                   child: ElevatedButton(
                     onPressed: () {
-                      // Implement your logic here
+                      double tdee = calculateTDEE(widget.bmr, _activityFactor);
+                      saveTDEEToFirestore(tdee); // บันทึกค่า TDEE ลงใน Firestore
+
+                      showDialog(
+                        context: context,
+                        builder: (BuildContext context) {
+                          return AlertDialog(
+                            title: Text('TDEE ของคุณคือ:'),
+                            content: Text(
+                              '${tdee.toStringAsFixed(2)} กิโลแคลอรี/วัน',
+                              style: TextStyle(fontSize: 18),
+                            ),
+                            actions: <Widget>[
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.of(context).pop(); // ปิด Dialog
+                                  Navigator.pushAndRemoveUntil(
+                                    context,
+                                    MaterialPageRoute(builder: (context) => LoginScreen()), 
+                                    (Route<dynamic> route) => false,
+                                  );
+                                },
+                                child: Text('ตกลง'),
+                              ),
+                            ],
+                          );
+                        },
+                      );
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.redAccent,
@@ -96,7 +148,6 @@ class _SelectActivityScreenState extends State<SelectActivityScreen> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                // Removed the display of selected activity
               ],
             ),
           ),
@@ -104,10 +155,4 @@ class _SelectActivityScreenState extends State<SelectActivityScreen> {
       ),
     );
   }
-}
-
-void main() {
-  runApp(MaterialApp(
-    home: SelectActivityScreen(),
-  ));
 }
