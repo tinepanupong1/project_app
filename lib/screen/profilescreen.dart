@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:project_app/component/constant.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:fl_chart/fl_chart.dart'; // fl_chart package
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
-
   @override
   _ProfileScreenState createState() => _ProfileScreenState();
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  late String uid;
   final TextEditingController nameController = TextEditingController();
   final TextEditingController genderController = TextEditingController();
   final TextEditingController ageController = TextEditingController();
@@ -17,95 +18,43 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final TextEditingController diseaseController = TextEditingController();
   final TextEditingController allergyController = TextEditingController();
   final TextEditingController activityController = TextEditingController();
-  int currentMonthIndex = 0;
-  final List<String> months = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม']; // Add more months as needed
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: backgroundColor,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: const Text('Profile'),
-        titleTextStyle: const TextStyle(
-          fontFamily: 'Jua',
-          fontSize: 20,
-          fontWeight: FontWeight.w700,
-          color: backgroundHead2,
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: backgroundPink),
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        ),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              CalorieGraphCard(
-                currentMonthIndex: currentMonthIndex,
-                onMonthChanged: (index) {
-                  setState(() {
-                    currentMonthIndex = index;
-                  });
-                },
-                months: months,
-              ),
-              const SizedBox(height: 20),
-              ProfileInfoCard(
-                onEdit: _editProfile,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+  void initState() {
+    super.initState();
+    uid = FirebaseAuth.instance.currentUser!.uid;
+    _fetchProfileData();
+  }
+
+  void _fetchProfileData() async {
+    DocumentSnapshot doc =
+        await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    if (doc.exists) {
+      var data = doc.data() as Map<String, dynamic>;
+      nameController.text = data['name'] ?? 'Unknown';
+      genderController.text = data['gender'] ?? 'Select Gender';
+      ageController.text = data['age']?.toString() ?? '';
+      weightController.text = data['weight']?.toString() ?? '';
+      heightController.text = data['height']?.toString() ?? '';
+      diseaseController.text = data['disease'] ?? 'Select Disease';
+      allergyController.text = data['allergies'] ?? '';
+      activityController.text = data['activity'] ?? '';
+      setState(() {});
+    }
+  }
+
+  double calculateBMI() {
+    double weight = double.tryParse(weightController.text) ?? 0.0;
+    double height = double.tryParse(heightController.text) ?? 0.0;
+
+    if (height > 0) {
+      return weight / ((height / 100) * (height / 100));
+    }
+    return 0.0;
   }
 
   void _editProfile() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Edit Profile'),
-          content: SingleChildScrollView(
-            child: Column(
-              children: [
-                _buildTextField('Name', nameController),
-                _buildTextField('Gender', genderController),
-                _buildTextField('Age', ageController),
-                _buildTextField('Weight', weightController),
-                _buildTextField('Height', heightController),
-                _buildTextField('Disease', diseaseController),
-                _buildTextField('Allergy', allergyController),
-                _buildTextField('Activity', activityController),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              child: const Text('Cancel'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-            TextButton(
-              child: const Text('Save'),
-              onPressed: () {
-                // Save the updated information
-                setState(() {});
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        );
-      },
-    );
+    // Your edit profile dialog code here
   }
 
   Widget _buildTextField(String label, TextEditingController controller) {
@@ -114,141 +63,178 @@ class _ProfileScreenState extends State<ProfileScreen> {
       decoration: InputDecoration(labelText: label),
     );
   }
+
+  @override
+  Widget build(BuildContext context) {
+    double bmi = calculateBMI();
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF6E8E8),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        title: const Text('Profile'),
+        centerTitle: true,
+        titleTextStyle: const TextStyle(
+          fontFamily: 'Jua',
+          fontSize: 30,
+          fontWeight: FontWeight.w500,
+          color: Color(0xFF2A505A),
+        ),
+      ),
+      body: SingleChildScrollView( // เพิ่ม SingleChildScrollView
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // กราฟสถิติอยู่ด้านบน
+            Container(
+              height: 200, // กำหนดความสูงของกราฟ
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              decoration: BoxDecoration(
+                color: Color(0xFF64D98A), // สีพื้นหลังของกราฟ
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    'ปริมาณแคลอรี่เดือน มกราคม 2567',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: LineChart(
+                        LineChartData(
+                          titlesData: FlTitlesData(
+                            leftTitles: SideTitles(showTitles: true),
+                            bottomTitles: SideTitles(showTitles: true),
+                          ),
+                          borderData: FlBorderData(show: true),
+                          lineBarsData: [
+                            LineChartBarData(
+                              spots: [
+                                FlSpot(0, 1500),
+                                FlSpot(1, 1600),
+                                FlSpot(2, 1700),
+                                FlSpot(3, 1800),
+                                FlSpot(4, 1900),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            ProfileCard(
+              name: nameController.text,
+              gender: genderController.text,
+              age: int.tryParse(ageController.text) ?? 0,
+              weight: double.tryParse(weightController.text) ?? 0.0,
+              height: double.tryParse(heightController.text) ?? 0.0,
+              disease: diseaseController.text,
+              allergy: allergyController.text,
+              activity: activityController.text,
+              bmi: bmi,
+              onEdit: _editProfile,
+            ),
+          ],
+        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.pop(context); // กลับไปหน้าก่อนหน้า
+        },
+        backgroundColor: Colors.red,
+        child: const Icon(Icons.arrow_back), // ไอคอนปุ่มย้อนกลับ
+      ),
+    );
+  }
 }
 
-class CalorieGraphCard extends StatelessWidget {
-  final int currentMonthIndex;
-  final ValueChanged<int> onMonthChanged;
-  final List<String> months;
+class ProfileCard extends StatelessWidget {
+  final String name;
+  final String gender;
+  final int age;
+  final double weight;
+  final double height;
+  final String disease;
+  final String allergy;
+  final String activity;
+  final double bmi;
+  final VoidCallback onEdit;
 
-  CalorieGraphCard({
-    required this.currentMonthIndex,
-    required this.onMonthChanged,
-    required this.months,
+  ProfileCard({
+    required this.name,
+    required this.gender,
+    required this.age,
+    required this.weight,
+    required this.height,
+    required this.disease,
+    required this.allergy,
+    required this.activity,
+    required this.bmi,
+    required this.onEdit,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.green,
-        borderRadius: BorderRadius.circular(15),
+        color: const Color(0xFFFCC66A),
+        borderRadius: BorderRadius.circular(30),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.3),
-            blurRadius: 10.0,
-            offset: const Offset(0, 5),
+            color: Colors.grey.withOpacity(0.5),
+            spreadRadius: 2,
+            blurRadius: 5,
           ),
         ],
       ),
+      padding: const EdgeInsets.all(30.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'ปริมาณแคลอรี่เดือน ${months[currentMonthIndex]} 2567',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 10),
-          // Placeholder for graph
-          Container(
-            height: 200,
-            color: Colors.white,
-            child: Center(child: Text('Graph Placeholder')),
-          ),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              IconButton(
-                icon: Icon(Icons.arrow_back_ios, color: Colors.white),
-                onPressed: currentMonthIndex > 0
-                    ? () => onMonthChanged(currentMonthIndex - 1)
-                    : null,
+              const Text(
+                'ข้อมูลส่วนตัว',
+                style: TextStyle(fontSize: 20, color: Color(0xFF2A505A)),
               ),
               IconButton(
-                icon: Icon(Icons.arrow_forward_ios, color: Colors.white),
-                onPressed: currentMonthIndex < months.length - 1
-                    ? () => onMonthChanged(currentMonthIndex + 1)
-                    : null,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class ProfileInfoCard extends StatelessWidget {
-  final VoidCallback onEdit;
-
-  ProfileInfoCard({required this.onEdit});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.orange,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.3),
-            blurRadius: 10.0,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Expanded(
-                child: Text(
-                  'ชื่อ : ',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.edit, color: Colors.white),
+                icon: const Icon(Icons.edit, color: Color(0xFF2A505A)),
                 onPressed: onEdit,
               ),
             ],
           ),
+          _buildInfoRow('ชื่อ', name),
+          _buildInfoRow('เพศ', gender),
+          _buildInfoRow('อายุ', '$age'),
+          _buildInfoRow('น้ำหนัก', '$weight kg'),
+          _buildInfoRow('ส่วนสูง', '$height cm'),
+          _buildInfoRow('โรคที่เป็น', disease),
+          _buildInfoRow('อาหารแพ้', allergy),
+          _buildInfoRow('กิจกรรมที่ทำเป็นประจำ', activity),
           const SizedBox(height: 10),
-          ProfileInfoRow(label: 'เพศ : ', value: ''),
-          const SizedBox(height: 10),
-          ProfileInfoRow(label: 'อายุ : ', value: ''),
-          const SizedBox(height: 10),
-          ProfileInfoRow(label: 'น้ำหนัก : ', value: ''),
-          const SizedBox(height: 10),
-          ProfileInfoRow(label: 'ส่วนสูง : ', value: ''),
-          const SizedBox(height: 10),
-          ProfileInfoRow(label: 'โรคที่เป็น : ', value: ''),
-          const SizedBox(height: 10),
-          ProfileInfoRow(label: 'อาหารที่แพ้ : ', value: ''),
-          const SizedBox(height: 10),
-          ProfileInfoRow(label: 'กิจกรรมที่ทำเป็นประจำ : ', value: ''),
-          const SizedBox(height: 20),
           Center(
             child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
               decoration: BoxDecoration(
                 color: Colors.redAccent,
-                borderRadius: BorderRadius.circular(23),
+                borderRadius: BorderRadius.circular(5),
+                border: Border.all(color: Colors.white, width: 2.0),
               ),
-              child: const Text(
-                'BMI 22.5',
-                style: TextStyle(color: Colors.white, fontSize: 16),
+              padding: const EdgeInsets.all(8),
+              child: Text(
+                'BMI: ${bmi.toStringAsFixed(2)}',
+                style: const TextStyle(color: Colors.white, fontSize: 18),
               ),
             ),
           ),
@@ -256,34 +242,19 @@ class ProfileInfoCard extends StatelessWidget {
       ),
     );
   }
-}
 
-class ProfileInfoRow extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const ProfileInfoRow({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 16,
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        children: [
+          Text(
+            '$label: ',
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
-        ),
-        Text(
-          value,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ],
+          Text(value, style: const TextStyle(fontSize: 16)),
+        ],
+      ),
     );
   }
 }
