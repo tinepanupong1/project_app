@@ -229,8 +229,14 @@ class _SelectInfoScreenState extends State<SelectInfoScreen> {
       } else {
         bmr = 665 + (9.6 * weight) + (1.8 * height) - (4.7 * age);
       }
+    } else if (disease == 'ไม่เป็นโรค') {
+      if (gender == 'ชาย') {
+        bmr = 66 + (13.7 * weight) + (5 * height) - (6.8 * age);
+    } else {
+        bmr = 665 + (9.6 * weight) + (1.8 * height) - (4.7 * age);
     }
-
+  }
+  
     return bmr;
   }
 
