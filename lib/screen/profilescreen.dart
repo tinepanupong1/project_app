@@ -54,7 +54,55 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _editProfile() {
-    // Your edit profile dialog code here
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Edit Profile'),
+          content: SingleChildScrollView(
+            child: Column(
+              children: [
+                _buildTextField('Name', nameController),
+                _buildTextField('Gender', genderController),
+                _buildTextField('Age', ageController),
+                _buildTextField('Weight', weightController),
+                _buildTextField('Height', heightController),
+                _buildTextField('Disease', diseaseController),
+                _buildTextField('Allergy', allergyController),
+                _buildTextField('Activity', activityController),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: const Text('Save'),
+              onPressed: () async {
+                await FirebaseFirestore.instance
+                    .collection('users')
+                    .doc(uid)
+                    .update({
+                  'name': nameController.text,
+                  'gender': genderController.text,
+                  'age': int.tryParse(ageController.text) ?? 0,
+                  'weight': double.tryParse(weightController.text) ?? 0.0,
+                  'height': double.tryParse(heightController.text) ?? 0.0,
+                  'disease': diseaseController.text,
+                  'allergies': allergyController.text,
+                  'activity': activityController.text,
+                });
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Widget _buildTextField(String label, TextEditingController controller) {
@@ -81,22 +129,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
           color: Color(0xFF2A505A),
         ),
       ),
-      body: SingleChildScrollView( // เพิ่ม SingleChildScrollView
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // กราฟสถิติอยู่ด้านบน
             Container(
-              height: 200, // กำหนดความสูงของกราฟ
+              height: 200,
               padding: const EdgeInsets.symmetric(vertical: 10),
               decoration: BoxDecoration(
-                color: Color(0xFF64D98A), // สีพื้นหลังของกราฟ
+                color: const Color(0xFF64D98A),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Column(
                 children: [
-                  Text(
+                  const Text(
                     'ปริมาณแคลอรี่เดือน มกราคม 2567',
                     style: TextStyle(
                       color: Colors.white,
@@ -143,17 +190,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
               allergy: allergyController.text,
               activity: activityController.text,
               bmi: bmi,
-              onEdit: _editProfile,
+              onEdit: _editProfile, // ฟังก์ชันแก้ไข
             ),
           ],
         ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          Navigator.pop(context); // กลับไปหน้าก่อนหน้า
+          Navigator.pop(context);
         },
         backgroundColor: Colors.red,
-        child: const Icon(Icons.arrow_back), // ไอคอนปุ่มย้อนกลับ
+        child: const Icon(Icons.arrow_back),
       ),
     );
   }
@@ -211,7 +258,7 @@ class ProfileCard extends StatelessWidget {
               ),
               IconButton(
                 icon: const Icon(Icons.edit, color: Color(0xFF2A505A)),
-                onPressed: onEdit,
+                onPressed: onEdit, // ฟังก์ชันแก้ไขถูกเรียกใช้งาน
               ),
             ],
           ),
