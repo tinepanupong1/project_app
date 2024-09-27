@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fl_chart/fl_chart.dart'; // fl_chart package
+import 'package:project_app/screen/homescreen.dart';
 
 class ProfileScreen extends StatefulWidget {
   @override
@@ -27,8 +28,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _fetchProfileData() async {
-    DocumentSnapshot doc =
-        await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    DocumentSnapshot doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
     if (doc.exists) {
       var data = doc.data() as Map<String, dynamic>;
       nameController.text = data['name'] ?? 'Unknown';
@@ -39,7 +39,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       diseaseController.text = data['disease'] ?? 'Select Disease';
       allergyController.text = data['allergies'] ?? '';
       activityController.text = data['activity'] ?? '';
-      setState(() {});
+      setState(() {}); // Update UI after fetching data
     }
   }
 
@@ -69,7 +69,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 _buildTextField('Height', heightController),
                 _buildTextField('Disease', diseaseController),
                 _buildTextField('Allergy', allergyController),
-                _buildTextField('Activity', activityController),
+                _buildActivityDropdown(), // Add Dropdown for Activity
               ],
             ),
           ),
@@ -83,6 +83,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             TextButton(
               child: const Text('Save'),
               onPressed: () async {
+                // Update data in Firestore
                 await FirebaseFirestore.instance
                     .collection('users')
                     .doc(uid)
@@ -94,8 +95,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   'height': double.tryParse(heightController.text) ?? 0.0,
                   'disease': diseaseController.text,
                   'allergies': allergyController.text,
-                  'activity': activityController.text,
+                  'activity': activityController.text, // Update activity value
                 });
+
+                // Update UI immediately
+                setState(() {});
+
+                // Close dialog
                 Navigator.of(context).pop();
               },
             ),
@@ -109,6 +115,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return TextField(
       controller: controller,
       decoration: InputDecoration(labelText: label),
+    );
+  }
+
+  Widget _buildActivityDropdown() {
+    List<String> activities = [
+      'นั่งทำงานอยู่กับที่และไม่ได้ออกกำลังกายเลย',
+      'ออกกำลังกายหรือเล่นกีฬาเล็กน้อยประมาณอาทิตย์ละ 1-3 วัน',
+      'ออกกำลังกายหรือเล่นกีฬาปานกลางประมาณอาทิตย์ละ 3-5 วัน',
+      'ออกกำลังกายหรือเล่นกีฬาอย่างหนักประมาณอาทิตย์ละ 6-7 วัน',
+      'ออกกำลังกายหรือเล่นที่กีฬาอย่างหนักมากทุกวันเช้า และเย็น',
+    ];
+
+    return DropdownButtonFormField<String>(
+      decoration: InputDecoration(labelText: 'Activity'),
+      value: activityController.text.isEmpty ? null : activityController.text,
+      onChanged: (String? newValue) {
+        setState(() {
+          activityController.text = newValue ?? '';
+        });
+      },
+      items: activities.map<DropdownMenuItem<String>>((String value) {
+        return DropdownMenuItem<String>(
+          value: value,
+          child: Text(value),
+        );
+      }).toList(),
     );
   }
 
@@ -190,17 +222,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
               allergy: allergyController.text,
               activity: activityController.text,
               bmi: bmi,
-              onEdit: _editProfile, // ฟังก์ชันแก้ไข
+              onEdit: _editProfile, // Edit function
             ),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.pop(context);
-        },
-        backgroundColor: Colors.red,
-        child: const Icon(Icons.arrow_back),
+      floatingActionButton: Container(
+        alignment: Alignment.bottomCenter,
+        margin: const EdgeInsets.only(bottom: 16), // Adjust margin as needed
+        child: FloatingActionButton(
+          onPressed: () {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const HomeScreen()), // Use pushReplacement to calculate TDEE again
+            );
+          },
+          backgroundColor: Colors.red,
+          child: const Icon(Icons.arrow_back),
+        ),
       ),
     );
   }
@@ -258,7 +297,7 @@ class ProfileCard extends StatelessWidget {
               ),
               IconButton(
                 icon: const Icon(Icons.edit, color: Color(0xFF2A505A)),
-                onPressed: onEdit, // ฟังก์ชันแก้ไขถูกเรียกใช้งาน
+                onPressed: onEdit, // Call edit function
               ),
             ],
           ),

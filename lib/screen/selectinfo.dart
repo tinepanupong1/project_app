@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:project_app/screen/selectactivity.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:project_app/screen/selectactivity.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SelectInfoScreen extends StatefulWidget {
   @override
@@ -51,39 +51,46 @@ class _SelectInfoScreenState extends State<SelectInfoScreen> {
                 ElevatedButton(
                   onPressed: () async {
                     final String gender = _selectedGender;
-                    final double weight = double.parse(weightController.text);
-                    final double height = double.parse(heightController.text);
-                    final int age = int.parse(ageController.text);
+                    final String weight = weightController.text;
+                    final String height = heightController.text;
+                    final String age = ageController.text;
                     final String disease = _selectedDisease;
                     final String allergies = allergyController.text;
 
-                    // คำนวณ BMR
-                    final double bmr = calculateBMR(gender, weight, height, age, disease);
+                    // ตรวจสอบว่าทุกช่องกรอกข้อมูลครบถ้วน
+                    if (gender == 'Select Gender' || 
+                        weight.isEmpty || 
+                        height.isEmpty || 
+                        age.isEmpty || 
+                        disease == 'Select Disease') {
+                      // แสดง AlertDialog แจ้งเตือนให้กรอกข้อมูล
+                      showDialog(
+                        context: context,
+                        builder: (BuildContext context) {
+                          return AlertDialog(
+                            title: const Text('กรุณากรอกข้อมูลให้ครบถ้วน'),
+                            content: const Text('ทุกช่องจำเป็นต้องกรอกข้อมูล'),
+                            actions: <Widget>[
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.of(context).pop(); // ปิด Dialog
+                                },
+                                child: const Text('ตกลง'),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                      return; // หยุดการทำงานของปุ่ม
+                    }
 
-                    // แสดงค่า BMR ผ่าน AlertDialog
-                    showDialog(
-                      context: context,
-                      builder: (BuildContext context) {
-                        return AlertDialog(
-                          title: Text('ค่า BMR'),
-                          content: Text('ค่า BMR ของคุณคือ: ${bmr.toStringAsFixed(2)} กิโลแคลอรี/วัน'),
-                          actions: <Widget>[
-                            TextButton(
-                              onPressed: () {
-                                Navigator.of(context).pop(); // ปิด Dialog
-                                // บันทึกข้อมูลผู้ใช้
-                                saveUserData(gender, ageController.text, weightController.text, heightController.text, disease, allergies);
-                                // ไปยังหน้าจอถัดไปพร้อมกับส่งค่า BMR
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(builder: (context) => SelectActivityScreen(bmr: bmr)),
-                                );
-                              },
-                              child: Text('ตกลง'),
-                            ),
-                          ],
-                        );
-                      },
+                    // บันทึกข้อมูลผู้ใช้
+                    saveUserData(gender, age, weight, height, disease, allergies);
+
+                    // ไปยังหน้าจอถัดไป
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => SelectActivityScreen()),
                     );
                   },
                   style: ElevatedButton.styleFrom(
@@ -205,39 +212,6 @@ class _SelectInfoScreenState extends State<SelectInfoScreen> {
         ),
       ),
     );
-  }
-
-  double calculateBMR(String gender, double weight, double height, int age, String disease) {
-    double bmr = 0.0;
-
-    if (disease == 'โรคอ้วน') {
-      if (gender == 'ชาย') {
-        bmr = (66 + (13.7 * weight) + (5 * height) - (6.8 * age)) - 500;
-      } else {
-        bmr = (665 + (9.6 * weight) + (1.8 * height) - (4.7 * age)) - 500;
-      }
-    } else if (disease == 'โรคไต') {
-      // สมมติว่าอายุต่ำกว่า 60 ปีสำหรับการคำนวณ
-      if (age < 60) {
-        bmr = 35 * weight;
-      } else {
-        bmr = 30 * weight;
-      }
-    } else if (disease == 'โรคความดันโลหิตสูง') {
-      if (gender == 'ชาย') {
-        bmr = 66 + (13.7 * weight) + (5 * height) - (6.8 * age);
-      } else {
-        bmr = 665 + (9.6 * weight) + (1.8 * height) - (4.7 * age);
-      }
-    } else if (disease == 'ไม่เป็นโรค') {
-      if (gender == 'ชาย') {
-        bmr = 66 + (13.7 * weight) + (5 * height) - (6.8 * age);
-    } else {
-        bmr = 665 + (9.6 * weight) + (1.8 * height) - (4.7 * age);
-    }
-  }
-  
-    return bmr;
   }
 
   Future<void> saveUserData(String gender, String age, String weight, String height, String disease, String allergies) async {
