@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fl_chart/fl_chart.dart'; // fl_chart package
+import 'package:project_app/component/constant.dart';
 import 'package:project_app/screen/homescreen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -58,7 +59,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Edit Profile'),
+          backgroundColor: backgroundColor,
+          title: const Text('Edit Profile',
+          style: TextStyle(fontFamily: 'Jua',
+          fontSize: 30,
+          fontWeight: FontWeight.w500,
+          color: Color(0xFF2A505A),),
+          ),
           content: SingleChildScrollView(
             child: Column(
               children: [
@@ -75,13 +82,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           actions: [
             TextButton(
-              child: const Text('Cancel'),
+              child: const Text('Cancel',
+              style: TextStyle(color: Colors.redAccent),),
               onPressed: () {
                 Navigator.of(context).pop();
               },
             ),
             TextButton(
-              child: const Text('Save'),
+              child: const Text('Save',style:TextStyle(color: Colors.green) ,),
               onPressed: () async {
                 // Update data in Firestore
                 await FirebaseFirestore.instance
@@ -135,10 +143,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
           activityController.text = newValue ?? '';
         });
       },
+      isExpanded: true,
       items: activities.map<DropdownMenuItem<String>>((String value) {
         return DropdownMenuItem<String>(
           value: value,
-          child: Text(value),
+          child: Text(value,overflow: TextOverflow.clip,),
         );
       }).toList(),
     );
@@ -333,12 +342,16 @@ class ProfileCard extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
+        crossAxisAlignment:CrossAxisAlignment.start,
         children: [
           Text(
             '$label: ',
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
-          Text(value, style: const TextStyle(fontSize: 16)),
+          Expanded(child:Text(value, style: const TextStyle(fontSize: 16),
+          overflow: TextOverflow.clip),
+          
+          ) 
         ],
       ),
     );

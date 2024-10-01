@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:percent_indicator/percent_indicator.dart';
 import 'package:project_app/component/constant.dart';
 import 'package:project_app/screen/bottom_navbar.dart';
+import 'package:project_app/screen/goal_screen.dart';
 import 'fooddiaryscreen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -285,38 +286,48 @@ class GoalAndDiaryRow extends StatelessWidget {
         Expanded(child: FoodDiaryCard()),
       ],
     );
+    
   }
 }
 
 class GoalCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.3),
-            blurRadius: 10.0,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: const Column(
-        children: [
-          Image(
-            image: AssetImage('assets/images/G.png'),
-            height: 50,
-          ),
-          SizedBox(height: 10),
-          Text('Goal', style: TextStyle(fontSize: 16, color: backgroundBlue)),
-        ],
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => GoalScreen()), // เชื่อมต่อไปยังหน้า GoalScreen
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(15),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.3),
+              blurRadius: 10.0,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: const Column(
+          children: [
+            Image(
+              image: AssetImage('assets/images/G.png'),
+              height: 50,
+            ),
+            SizedBox(height: 10),
+            Text('Goal', style: TextStyle(fontSize: 16, color: backgroundBlue)),
+          ],
+        ),
       ),
     );
   }
 }
+
 
 class FoodDiaryCard extends StatelessWidget {
   @override
