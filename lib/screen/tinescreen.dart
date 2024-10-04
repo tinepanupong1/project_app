@@ -31,48 +31,49 @@ class _TineScreenState extends State<TineScreen> {
   TextEditingController ingredientsController = TextEditingController();
 
   Future<void> addFoodMenu() async {
-    try {
-      // ตรวจสอบว่ากรอกข้อมูลครบทุกฟิลด์หรือไม่
-      if (foodNameController.text.isNotEmpty &&
-          caloriesController.text.isNotEmpty &&
-          ingredientsController.text.isNotEmpty) {
+  try {
+    // ตรวจสอบว่ากรอกข้อมูลครบทุกฟิลด์หรือไม่
+    if (foodNameController.text.isNotEmpty &&
+        caloriesController.text.isNotEmpty &&
+        ingredientsController.text.isNotEmpty) {
 
-        // แปลงค่าจาก TextField
-        String foodName = foodNameController.text;
-        int calories = int.parse(caloriesController.text); // แปลงแคลอรี่เป็นตัวเลข
-        List<String> ingredients = ingredientsController.text.split(','); // แยกรายการวัตถุดิบ
+      // แปลงค่าจาก TextField
+      String foodName = foodNameController.text;
+      double calories = double.parse(caloriesController.text); // แปลงแคลอรี่เป็นตัวเลขชนิด double
+      List<String> ingredients = ingredientsController.text.split(','); // แยกรายการวัตถุดิบ
 
-        // เพิ่มข้อมูลลงใน Firestore
-        await _firestore.collection('disease')
-          .doc('kidney disease')
-          .collection('meals')
-          .add({
-            'food_name': foodName,
-            'calories': calories,
-            'ingredients': ingredients
-          }).then((value) {
-            print("เพิ่มข้อมูลเมนูสำเร็จ");
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('เพิ่มข้อมูลสำเร็จ')),
-            );
-          }).catchError((error) {
-            print("เกิดข้อผิดพลาด: $error");
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('เกิดข้อผิดพลาด: $error')),
-            );
-          });
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('กรุณากรอกข้อมูลให้ครบ')),
-        );
-      }
-    } catch (e) {
-      print("เกิดข้อผิดพลาด: $e");
+      // เพิ่มข้อมูลลงใน Firestore
+      await _firestore.collection('disease')
+        .doc('Hypertension')
+        .collection('snacks')
+        .add({
+          'food_name': foodName,
+          'calories': calories,
+          'ingredients': ingredients
+        }).then((value) {
+          print("เพิ่มข้อมูลเมนูสำเร็จ");
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('เพิ่มข้อมูลสำเร็จ')),
+          );
+        }).catchError((error) {
+          print("เกิดข้อผิดพลาด: $error");
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('เกิดข้อผิดพลาด: $error')),
+          );
+        });
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('เกิดข้อผิดพลาด: $e')),
+        SnackBar(content: Text('กรุณากรอกข้อมูลให้ครบ')),
       );
     }
+  } catch (e) {
+    print("เกิดข้อผิดพลาด: $e");
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('เกิดข้อผิดพลาด: $e')),
+    );
   }
+}
+
 
   @override
   Widget build(BuildContext context) {
