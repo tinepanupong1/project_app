@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'menuscreen.dart'; // นำเข้า MenuScreen
+import 'seachmenuscreen.dart'; // นำเข้า MenuScreen
 import 'package:intl/intl.dart';
 
 class FoodDiaryScreen extends StatefulWidget {
@@ -63,7 +63,7 @@ class _FoodDiaryScreenState extends State<FoodDiaryScreen> {
               // นำทางไปยัง MenuScreen เมื่อกดปุ่ม
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => MenuScreen()), // นำทางไปยังหน้าจอ MenuScreen
+                MaterialPageRoute(builder: (context) => SearchMenuScreen()), // นำทางไปยังหน้าจอ MenuScreen
               );
             },
           ),

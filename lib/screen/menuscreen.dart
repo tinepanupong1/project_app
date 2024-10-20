@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 
 class MenuScreen extends StatelessWidget {
+  final String foodName;
+  final num calories;
+
+  MenuScreen({required this.foodName, required this.calories});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -8,7 +13,7 @@ class MenuScreen extends StatelessWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: const Text(
-          'Thai Food',
+          'Menu',
           style: TextStyle(
             fontFamily: 'Jua',
             fontSize: 24,
@@ -20,132 +25,119 @@ class MenuScreen extends StatelessWidget {
         leading: IconButton(
           icon: const Icon(Icons.close, color: Colors.red),
           onPressed: () {
-            Navigator.pop(context); // ปุ่มเพื่อปิดหน้าจอ
+            Navigator.pop(context); // ปิดหน้าจอ
           },
         ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            const SizedBox(height: 10),
-            // ส่วนของการค้นหาเมนู
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    decoration: InputDecoration(
-                      prefixIcon: Icon(Icons.search, color: Colors.grey),
-                      hintText: "Search Menu",
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(20),
-                        borderSide: BorderSide.none,
-                      ),
-                      filled: true,
-                      fillColor: Colors.grey.shade200,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                IconButton(
-                  icon: const Icon(Icons.filter_list, color: Colors.grey),
-                  onPressed: () {
-                    // ฟังก์ชันสำหรับการกรองเมนู
-                  },
-                ),
-              ],
+            // ปรับขนาดของภาพให้ใหญ่ขึ้น
+            Image.asset(
+              'assets/images/dish.png',
+              height: 200, // เพิ่มขนาดของภาพ
+              width: 200,  // กำหนดขนาดความกว้าง
+              fit: BoxFit.cover, // ให้ภาพขยายตามขนาดที่กำหนด
             ),
             const SizedBox(height: 20),
-            // ปุ่ม Favorite
-            Center(
-              child: Column(
-                children: [
-                  IconButton(
-                    icon: const Icon(
-                      Icons.favorite,
-                      color: Colors.red,
-                      size: 40,
-                    ),
-                    onPressed: () {
-                      // ฟังก์ชันสำหรับ Favorite
-                    },
-                  ),
-                  const Text(
-                    "Favorite",
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-            // เมนูอาหารไทย
-            const Text(
-              'เมนูอาหารไทย',
-              style: TextStyle(
-                fontSize: 18,
+            Text(
+              foodName,
+              style: const TextStyle(
+                fontSize: 24, // เพิ่มขนาดฟอนต์
                 fontWeight: FontWeight.bold,
                 color: Colors.redAccent,
               ),
             ),
             const SizedBox(height: 10),
-            Expanded(
-              child: ListView(
-                children: [
-                  buildMenuItem('ข้าวมันไก่ต้ม 1 จาน', '585 kcal'),
-                  buildMenuItem('ข้าวผัดอเมริกัน 1 จาน', '700 kcal'),
-                  buildMenuItem('ผัดซีอิ๊วหมู 1 จาน', '679 kcal'),
-                  buildMenuItem('ผัดไทยกุ้งสด 1 จาน', '590 kcal'),
-                  buildMenuItem('ข้าวคลุกกะปิ 1 จาน', '614 kcal'),
-                  buildMenuItem('ข้าวหมกไก่ 1 จาน', '540 kcal'),
-                ],
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  '${calories.toString()} แคลอรี่',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.remove),
+                      onPressed: () {},
+                    ),
+                    const Text(
+                      '1',
+                      style: TextStyle(fontSize: 18),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.add),
+                      onPressed: () {},
+                    ),
+                  ],
+                ),
+                const Text(
+                  'จาน',
+                  style: TextStyle(fontSize: 18),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Column(
+              children: [
+                const Text(
+                  'ปริมาณแคลอรี่เทียบเท่าการออกกำลังกาย',
+                  style: TextStyle(fontSize: 16),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    Column(
+                      children: [
+                        Image.asset(
+                          'assets/images/run.png',
+                          height: 100, // ขยายขนาดของภาพวิ่ง
+                        ),
+                        const SizedBox(height: 5),
+                        const Text('วิ่ง 10 นาที'),
+                      ],
+                    ),
+                    Column(
+                      children: [
+                        Image.asset(
+                          'assets/images/bike.png',
+                          height: 100, // ขยายขนาดของภาพปั่นจักรยาน
+                        ),
+                        const SizedBox(height: 5),
+                        const Text('ปั่นจักรยาน 20 นาที'),
+                      ],
+                    ),
+                    Column(
+                      children: [
+                        Image.asset(
+                          'assets/images/swim.png',
+                          height: 100, // ขยายขนาดของภาพว่ายน้ำ
+                        ),
+                        const SizedBox(height: 5),
+                        const Text('ว่ายน้ำ 5 นาที'),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                // ฟังก์ชันบันทึกข้อมูลลง Food Diary
+              },
+              child: const Text('บันทึกลง Food Diary'),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  // ฟังก์ชันสำหรับสร้างรายการเมนูอาหาร
-  Widget buildMenuItem(String foodName, String calories) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              const CircleAvatar(
-                backgroundColor: Colors.blueAccent,
-                radius: 20,
-                child: Icon(
-                  Icons.food_bank,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Text(
-                foodName,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-          Text(
-            calories,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              color: Colors.black54,
-            ),
-          ),
-        ],
       ),
     );
   }
