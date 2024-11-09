@@ -1,13 +1,23 @@
 import 'package:flutter/material.dart';
 
-class MenuScreen extends StatelessWidget {
+class MenuScreen extends StatefulWidget {
   final String foodName;
   final num calories;
 
   MenuScreen({required this.foodName, required this.calories});
 
   @override
+  _MenuScreenState createState() => _MenuScreenState();
+}
+
+class _MenuScreenState extends State<MenuScreen> {
+  int plateCount = 1; // จำนวนจานเริ่มต้นที่ 1
+
+  @override
   Widget build(BuildContext context) {
+    // คำนวณแคลอรี่รวมตามจำนวนจาน
+    final totalCalories = widget.calories * plateCount;
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -34,18 +44,17 @@ class MenuScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // ปรับขนาดของภาพให้ใหญ่ขึ้น
             Image.asset(
               'assets/images/dish.png',
-              height: 200, // เพิ่มขนาดของภาพ
-              width: 200,  // กำหนดขนาดความกว้าง
-              fit: BoxFit.cover, // ให้ภาพขยายตามขนาดที่กำหนด
+              height: 200,
+              width: 200,
+              fit: BoxFit.cover,
             ),
             const SizedBox(height: 20),
             Text(
-              foodName,
+              widget.foodName,
               style: const TextStyle(
-                fontSize: 24, // เพิ่มขนาดฟอนต์
+                fontSize: 24,
                 fontWeight: FontWeight.bold,
                 color: Colors.redAccent,
               ),
@@ -55,7 +64,7 @@ class MenuScreen extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  '${calories.toString()} แคลอรี่',
+                  '$totalCalories แคลอรี่',
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -66,15 +75,25 @@ class MenuScreen extends StatelessWidget {
                   children: [
                     IconButton(
                       icon: const Icon(Icons.remove),
-                      onPressed: () {},
+                      onPressed: () {
+                        if (plateCount > 1) {
+                          setState(() {
+                            plateCount--;
+                          });
+                        }
+                      },
                     ),
-                    const Text(
-                      '1',
-                      style: TextStyle(fontSize: 18),
+                    Text(
+                      '$plateCount',
+                      style: const TextStyle(fontSize: 18),
                     ),
                     IconButton(
                       icon: const Icon(Icons.add),
-                      onPressed: () {},
+                      onPressed: () {
+                        setState(() {
+                          plateCount++;
+                        });
+                      },
                     ),
                   ],
                 ),
@@ -99,7 +118,7 @@ class MenuScreen extends StatelessWidget {
                       children: [
                         Image.asset(
                           'assets/images/run.png',
-                          height: 100, // ขยายขนาดของภาพวิ่ง
+                          height: 100,
                         ),
                         const SizedBox(height: 5),
                         const Text('วิ่ง 10 นาที'),
@@ -109,7 +128,7 @@ class MenuScreen extends StatelessWidget {
                       children: [
                         Image.asset(
                           'assets/images/bike.png',
-                          height: 100, // ขยายขนาดของภาพปั่นจักรยาน
+                          height: 100,
                         ),
                         const SizedBox(height: 5),
                         const Text('ปั่นจักรยาน 20 นาที'),
@@ -119,7 +138,7 @@ class MenuScreen extends StatelessWidget {
                       children: [
                         Image.asset(
                           'assets/images/swim.png',
-                          height: 100, // ขยายขนาดของภาพว่ายน้ำ
+                          height: 100,
                         ),
                         const SizedBox(height: 5),
                         const Text('ว่ายน้ำ 5 นาที'),

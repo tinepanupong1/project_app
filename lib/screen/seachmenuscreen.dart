@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'menuscreen.dart'; // เพิ่มไฟล์ MenuScreen ที่สร้างไว้
+import 'package:firebase_auth/firebase_auth.dart';
+import 'menuscreen.dart';
 
 class SearchMenuScreen extends StatefulWidget {
   @override
@@ -10,7 +11,116 @@ class SearchMenuScreen extends StatefulWidget {
 class _SearchMenuScreenState extends State<SearchMenuScreen> {
   String? selectedDisease;
   List<Map<String, dynamic>> menuItems = [];
-  List<String> favoriteFoods = []; // รายการอาหารที่ชอบ
+  List<Map<String, dynamic>> filteredMenuItems = [];
+  List<Map<String, dynamic>> favoriteFoods = [];
+  final String userId = FirebaseAuth.instance.currentUser?.uid ?? '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFavoriteFoods();
+    filteredMenuItems = menuItems;
+  }
+
+  // Load user's favorite foods from Firebase
+  void _loadFavoriteFoods() async {
+    if (userId.isEmpty) {
+      print("User not logged in");
+      return;
+    }
+
+    var snapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .collection('favorites')
+        .get();
+
+    setState(() {
+      favoriteFoods = snapshot.docs.map((doc) => {
+        'food_name': doc['food_name'].toString(),
+        'calories': doc['calories'] is num ? doc['calories'] : int.tryParse(doc['calories'] ?? '0') ?? 0
+      }).toList();
+    });
+  }
+
+  // Toggle favorite food in Firebase
+  void _toggleFavorite(String foodName, dynamic calories) async {
+    if (userId.isEmpty) {
+      print("User not logged in");
+      return;
+    }
+
+    final docRef = FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .collection('favorites')
+        .doc(foodName);
+
+    final parsedCalories = calories is num ? calories : int.tryParse(calories.toString()) ?? 0;
+
+    if (favoriteFoods.any((food) => food['food_name'] == foodName)) {
+      await docRef.delete();
+      setState(() {
+        favoriteFoods.removeWhere((food) => food['food_name'] == foodName);
+      });
+    } else {
+      await docRef.set({
+        'food_name': foodName,
+        'calories': parsedCalories
+      });
+      setState(() {
+        favoriteFoods.add({
+          'food_name': foodName,
+          'calories': parsedCalories
+        });
+      });
+    }
+  }
+
+  // Filter menu based on selected disease
+  void _filterMenuByDisease(String disease) async {
+    List<Map<String, dynamic>> allItems = [];
+
+    var mealsSnapshot = await FirebaseFirestore.instance
+        .collection('disease')
+        .doc(disease)
+        .collection('meals')
+        .get();
+
+    for (var doc in mealsSnapshot.docs) {
+      allItems.add(doc.data());
+    }
+
+    var snacksSnapshot = await FirebaseFirestore.instance
+        .collection('disease')
+        .doc(disease)
+        .collection('snacks')
+        .get();
+
+    for (var doc in snacksSnapshot.docs) {
+      allItems.add(doc.data());
+    }
+
+    allItems.sort((a, b) => a['food_name'].compareTo(b['food_name']));
+
+    setState(() {
+      menuItems = allItems;
+      filteredMenuItems = allItems;
+    });
+  }
+
+  // Filter menu items based on search query
+  void _filterMenuItems(String query) {
+    setState(() {
+      if (query.isEmpty) {
+        filteredMenuItems = menuItems;
+      } else {
+        filteredMenuItems = menuItems
+            .where((item) => item['food_name'].toString().startsWith(query))
+            .toList();
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +141,7 @@ class _SearchMenuScreenState extends State<SearchMenuScreen> {
         leading: IconButton(
           icon: const Icon(Icons.close, color: Colors.red),
           onPressed: () {
-            Navigator.pop(context); // ปิดหน้าจอ
+            Navigator.pop(context);
           },
         ),
       ),
@@ -41,11 +151,11 @@ class _SearchMenuScreenState extends State<SearchMenuScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 10),
-            // ส่วนของการค้นหาเมนู
             Row(
               children: [
                 Expanded(
                   child: TextField(
+                    onChanged: _filterMenuItems,
                     decoration: InputDecoration(
                       prefixIcon: Icon(Icons.search, color: Colors.grey),
                       hintText: "Search Menu",
@@ -70,11 +180,12 @@ class _SearchMenuScreenState extends State<SearchMenuScreen> {
             const SizedBox(height: 20),
             Expanded(
               child: ListView.builder(
-                itemCount: menuItems.length,
+                itemCount: filteredMenuItems.isEmpty ? favoriteFoods.length : filteredMenuItems.length,
                 itemBuilder: (context, index) {
-                  final foodName = menuItems[index]['food_name'];
-                  final calories = menuItems[index]['calories'];
-                  final isFavorite = favoriteFoods.contains(foodName);
+                  final foodData = filteredMenuItems.isEmpty ? favoriteFoods[index] : filteredMenuItems[index];
+                  final foodName = foodData['food_name'];
+                  final calories = foodData['calories'] ?? 'N/A';
+                  final isFavorite = favoriteFoods.any((food) => food['food_name'] == foodName);
 
                   return GestureDetector(
                     onTap: () {
@@ -83,7 +194,7 @@ class _SearchMenuScreenState extends State<SearchMenuScreen> {
                         MaterialPageRoute(
                           builder: (context) => MenuScreen(
                             foodName: foodName,
-                            calories: calories,
+                            calories: calories is num ? calories : (int.tryParse(calories.toString()) ?? 0),
                           ),
                         ),
                       );
@@ -92,14 +203,14 @@ class _SearchMenuScreenState extends State<SearchMenuScreen> {
                       padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
                       margin: const EdgeInsets.symmetric(vertical: 5.0),
                       decoration: BoxDecoration(
-                        color: Colors.white, // สีพื้นหลังแถบ
+                        color: Colors.white,
                         borderRadius: BorderRadius.circular(10),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.grey.withOpacity(0.3),
                             spreadRadius: 1,
                             blurRadius: 3,
-                            offset: const Offset(0, 2), // เงาใต้แถบ
+                            offset: const Offset(0, 2),
                           ),
                         ],
                       ),
@@ -111,7 +222,7 @@ class _SearchMenuScreenState extends State<SearchMenuScreen> {
                               const CircleAvatar(
                                 backgroundColor: Colors.transparent,
                                 radius: 20,
-                                backgroundImage: AssetImage('assets/images/dish.png'), // แสดงภาพ Dish.png
+                                backgroundImage: AssetImage('assets/images/dish.png'),
                               ),
                               const SizedBox(width: 10),
                               Text(
@@ -125,29 +236,25 @@ class _SearchMenuScreenState extends State<SearchMenuScreen> {
                           ),
                           Row(
                             children: [
-                              Text(
-                                '$calories kcal',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w500,
-                                  color: Colors.black54,
+                              Container(
+                                width: 80,
+                                alignment: Alignment.centerRight,
+                                child: Text(
+                                  '${calories.toString()} kcal',
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.black54,
+                                  ),
                                 ),
                               ),
                               IconButton(
                                 icon: Icon(
-                                  isFavorite
-                                      ? Icons.favorite
-                                      : Icons.favorite_border,
+                                  isFavorite ? Icons.favorite : Icons.favorite_border,
                                   color: isFavorite ? Colors.red : Colors.grey,
                                 ),
                                 onPressed: () {
-                                  setState(() {
-                                    if (isFavorite) {
-                                      favoriteFoods.remove(foodName);
-                                    } else {
-                                      favoriteFoods.add(foodName);
-                                    }
-                                  });
+                                  _toggleFavorite(foodName, calories);
                                 },
                               ),
                             ],
@@ -165,7 +272,7 @@ class _SearchMenuScreenState extends State<SearchMenuScreen> {
     );
   }
 
-  // ฟังก์ชันแสดงหน้าจอเลือกโรค
+  // Filter dialog function
   void _showFilterDialog() {
     showDialog(
       context: context,
@@ -201,41 +308,5 @@ class _SearchMenuScreenState extends State<SearchMenuScreen> {
         );
       },
     );
-  }
-
-  // ฟังก์ชันดึงข้อมูลเมนูตามโรค
-  void _filterMenuByDisease(String disease) async {
-    List<Map<String, dynamic>> meals = [];
-    List<Map<String, dynamic>> snacks = [];
-
-    // ดึงข้อมูลจาก Firestore ของ meals
-    var mealsSnapshot = await FirebaseFirestore.instance
-        .collection('disease')
-        .doc(disease)
-        .collection('meals')
-        .get();
-
-    for (var doc in mealsSnapshot.docs) {
-      meals.add(doc.data());
-    }
-
-    // ดึงข้อมูลจาก Firestore ของ snacks
-    var snacksSnapshot = await FirebaseFirestore.instance
-        .collection('disease')
-        .doc(disease)
-        .collection('snacks')
-        .get();
-
-    for (var doc in snacksSnapshot.docs) {
-      snacks.add(doc.data());
-    }
-
-    // รวม meals และ snacks แล้วจัดเรียงตามชื่อเมนู (food_name) จาก ก-ฮ
-    List<Map<String, dynamic>> allItems = [...meals, ...snacks];
-    allItems.sort((a, b) => a['food_name'].compareTo(b['food_name']));
-
-    setState(() {
-      menuItems = allItems;
-    });
   }
 }
