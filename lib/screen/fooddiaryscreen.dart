@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'seachmenuscreen.dart'; // นำเข้า MenuScreen
+import 'searchmenuscreen.dart'; // นำเข้า MenuScreen
 import 'package:intl/intl.dart';
 
 class FoodDiaryScreen extends StatefulWidget {
