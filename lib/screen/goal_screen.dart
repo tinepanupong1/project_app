@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:fl_chart/fl_chart.dart'; // ใช้สำหรับแสดงกราฟ
+import 'package:project_app/screen/waterscreen.dart';
+import 'package:project_app/screen/weight_control_screen.dart'; // import weight control screen
+import 'package:project_app/screen/maintain_weight_screen.dart'; // import maintain weight screen
 
 class GoalScreen extends StatefulWidget {
   @override
@@ -7,38 +9,13 @@ class GoalScreen extends StatefulWidget {
 }
 
 class _GoalScreenState extends State<GoalScreen> {
-  final TextEditingController weightGoalController = TextEditingController();
-  String? selectedGoal; // เก็บเป้าหมายที่เลือก
-  DateTime? selectedDate; // เก็บวันที่เลือกสำหรับระยะเวลา
-
-  // รายการของเป้าหมายให้เลือก
-  final List<String> goals = [
-    'ลดน้ำหนัก',
-    'เพิ่มน้ำหนัก',
-    'รักษาน้ำหนัก',
-  ];
-
-  // ฟังก์ชันสำหรับเลือกวันที่
-  Future<void> _selectDate(BuildContext context) async {
-    final DateTime? pickedDate = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(2023),
-      lastDate: DateTime(2025),
-    );
-    if (pickedDate != null && pickedDate != selectedDate) {
-      setState(() {
-        selectedDate = pickedDate;
-      });
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF6E8E8),
+      backgroundColor: const Color(0xFFFDF1E6),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
+        elevation: 0,
         title: const Text('Goal'),
         centerTitle: true,
         titleTextStyle: const TextStyle(
@@ -51,100 +28,100 @@ class _GoalScreenState extends State<GoalScreen> {
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center, // จัดให้อยู่กลางหน้าจอ
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // แสดงกราฟความก้าวหน้า
             Container(
-              height: 200,
-              padding: const EdgeInsets.symmetric(vertical: 10),
+              width: 120,
+              height: 120,
               decoration: BoxDecoration(
-                color: Color(0xFF64D98A),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Column(
-                children: [
-                  const Text(
-                    'บันทึกความก้าวหน้า',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: LineChart(
-                        LineChartData(
-                          titlesData: FlTitlesData(
-                            leftTitles: SideTitles(showTitles: true),
-                            bottomTitles: SideTitles(showTitles: true),
-                          ),
-                          borderData: FlBorderData(show: true),
-                          lineBarsData: [
-                            LineChartBarData(
-                              spots: [
-                                FlSpot(0, 70),
-                                FlSpot(1, 69),
-                                FlSpot(2, 68),
-                                FlSpot(3, 67),
-                                FlSpot(4, 66),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-            // การเลือกเป้าหมาย
-            DropdownButtonFormField<String>(
-              decoration: const InputDecoration(labelText: 'เป้าหมาย'),
-              value: selectedGoal,
-              onChanged: (newValue) {
-                setState(() {
-                  selectedGoal = newValue;
-                });
-              },
-              items: goals.map((goal) {
-                return DropdownMenuItem<String>(
-                  value: goal,
-                  child: Text(goal),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 10),
-            // กำหนดน้ำหนักที่ต้องการ
-            TextField(
-              controller: weightGoalController,
-              decoration: const InputDecoration(
-                labelText: 'น้ำหนักที่ต้องการ (กก.)',
-              ),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 10),
-            // การเลือกระยะเวลา
-            GestureDetector(
-              onTap: () => _selectDate(context),
-              child: InputDecorator(
-                decoration: const InputDecoration(
-                  labelText: 'ระยะเวลาสิ้นสุด ',
+                image: DecorationImage(
+                  image: AssetImage('assets/images/goalH.png'),
+                  fit: BoxFit.cover,
                 ),
-                child: Text(selectedDate != null
-                    ? '${selectedDate?.toLocal()}'.split(' ')[0]
-                    : 'เลือกวันที่'),
+                borderRadius: BorderRadius.circular(10),
               ),
             ),
             const SizedBox(height: 20),
-            // ปุ่มบันทึกเป้าหมาย
-            ElevatedButton(
-              onPressed: () {
-                // เพิ่มโค้ดบันทึกข้อมูลเป้าหมาย
+            // ปุ่ม ควบคุมน้ำหนัก
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => WeightControlScreen()),
+                );
               },
-              child: const Text('บันทึกเป้าหมาย'),
+              child: Container(
+                padding: const EdgeInsets.all(16.0),
+                decoration: BoxDecoration(
+                  color: Colors.pink.shade100,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.monitor_weight, color: Colors.pink.shade600),
+                    const SizedBox(width: 10),
+                    const Text(
+                      'ควบคุมน้ำหนัก',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            // ปุ่ม รักษาน้ำหนัก
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => MaintainWeightScreen()),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.all(16.0),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade100,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.verified, color: Colors.green.shade600),
+                    const SizedBox(width: 10),
+                    const Text(
+                      'รักษาน้ำหนัก',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            // ปุ่ม ดื่มน้ำ
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => Waterscreen()),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.all(16.0),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade100,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.health_and_safety, color: Colors.orange.shade600),
+                    const SizedBox(width: 10),
+                    const Text(
+                      'ดื่มน้ำให้เพียงพอ',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ),
             ),
             const SizedBox(height: 20),
             // ปุ่มย้อนกลับ
