@@ -18,6 +18,11 @@ class _MenuScreenState extends State<MenuScreen> {
     // คำนวณแคลอรี่รวมตามจำนวนจาน
     final totalCalories = widget.calories * plateCount;
 
+    // คำนวณเวลาการออกกำลังกายตามแคลอรี่รวม
+    final runMinutes = (totalCalories / 10).toStringAsFixed(0);
+    final bikeMinutes = (totalCalories / 7).toStringAsFixed(0);
+    final swimMinutes = (totalCalories / 13).toStringAsFixed(0);
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -121,7 +126,7 @@ class _MenuScreenState extends State<MenuScreen> {
                           height: 100,
                         ),
                         const SizedBox(height: 5),
-                        const Text('วิ่ง 10 นาที'),
+                        Text('วิ่ง $runMinutes นาที'),
                       ],
                     ),
                     Column(
@@ -131,7 +136,7 @@ class _MenuScreenState extends State<MenuScreen> {
                           height: 100,
                         ),
                         const SizedBox(height: 5),
-                        const Text('ปั่นจักรยาน 20 นาที'),
+                        Text('ปั่นจักรยาน $bikeMinutes นาที'),
                       ],
                     ),
                     Column(
@@ -141,7 +146,7 @@ class _MenuScreenState extends State<MenuScreen> {
                           height: 100,
                         ),
                         const SizedBox(height: 5),
-                        const Text('ว่ายน้ำ 5 นาที'),
+                        Text('ว่ายน้ำ $swimMinutes นาที'),
                       ],
                     ),
                   ],
