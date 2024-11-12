@@ -267,10 +267,10 @@ class _WeightControlScreenState extends State<WeightControlScreen> {
                   onPressed: () => _selectDate(context),
                   child: Text(
                     "เลือกวันที่",
-                    style: TextStyle(color: Colors.white),
+                    style: TextStyle(color: backgroundPink),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: backgroundPink,
+                    backgroundColor: Colors.white,
                   ),
                 ),
                 const SizedBox(width: 10),
