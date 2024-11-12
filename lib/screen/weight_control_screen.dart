@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:project_app/component/constant.dart';
 
 class WeightControlScreen extends StatefulWidget {
   @override
@@ -11,7 +12,8 @@ class WeightControlScreen extends StatefulWidget {
 class _WeightControlScreenState extends State<WeightControlScreen> {
   double currentWeight = 0.0; // น้ำหนักปัจจุบันที่ดึงจาก Firebase
   double goalWeight = 0.0; // น้ำหนักเป้าหมายที่ตั้งไว้
-  String goalType = 'Select Occupation'; // ประเภทเป้าหมาย (ลดน้ำหนัก/เพิ่มน้ำหนัก)
+  String goalType =
+      'Select Occupation'; // ประเภทเป้าหมาย (ลดน้ำหนัก/เพิ่มน้ำหนัก)
   double targetDuration = 12; // ระยะเวลาเริ่มต้น (สัปดาห์) ที่เลือกจาก Slider
   final TextEditingController currentWeightController = TextEditingController();
   final TextEditingController goalWeightController = TextEditingController();
@@ -109,7 +111,10 @@ class _WeightControlScreenState extends State<WeightControlScreen> {
         });
       }
 
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .update({
         'weight': newWeight,
       });
 
@@ -132,12 +137,16 @@ class _WeightControlScreenState extends State<WeightControlScreen> {
     // แจ้งเตือนหากเป้าหมายเกินขีดจำกัดความปลอดภัย
     if (weightDiff > maxAllowedChange) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("เป้าหมายเกินขีดจำกัดความปลอดภัย กรุณาปรับเป้าหมาย")),
+        SnackBar(
+            content: Text("เป้าหมายเกินขีดจำกัดความปลอดภัย กรุณาปรับเป้าหมาย")),
       );
     } else {
       User? user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .update({
           'goalWeight': targetWeight,
           'targetDuration': targetDuration,
           'goalType': goalType,
@@ -173,7 +182,8 @@ class _WeightControlScreenState extends State<WeightControlScreen> {
     return Scaffold(
       backgroundColor: Color(0xFFFFF7EB), // สีพื้นหลัง
       appBar: AppBar(
-        title: const Text('ควบคุมน้ำหนัก', style: TextStyle(color: Colors.black)),
+        title:
+            const Text('ควบคุมน้ำหนัก', style: TextStyle(color: Colors.black)),
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
@@ -193,9 +203,11 @@ class _WeightControlScreenState extends State<WeightControlScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text("${currentWeight.toStringAsFixed(1)} kg", style: TextStyle(fontSize: 24, color: Colors.black)),
+                Text("${currentWeight.toStringAsFixed(1)} kg",
+                    style: TextStyle(fontSize: 24, color: Colors.black)),
                 Icon(Icons.arrow_forward, color: Colors.black),
-                Text("${goalWeight.toStringAsFixed(1)} kg", style: TextStyle(fontSize: 24, color: Colors.black)),
+                Text("${goalWeight.toStringAsFixed(1)} kg",
+                    style: TextStyle(fontSize: 24, color: Colors.black)),
               ],
             ),
             const SizedBox(height: 10),
@@ -219,9 +231,9 @@ class _WeightControlScreenState extends State<WeightControlScreen> {
                             isCurved: true,
                             colors: [Colors.orange],
                             barWidth: 3,
-                            belowBarData: BarAreaData(show: true, colors: [
-                              Colors.orange.withOpacity(0.3)
-                            ]),
+                            belowBarData: BarAreaData(
+                                show: true,
+                                colors: [Colors.orange.withOpacity(0.3)]),
                             dotData: FlDotData(show: true),
                           ),
                         ],
@@ -237,7 +249,14 @@ class _WeightControlScreenState extends State<WeightControlScreen> {
               decoration: InputDecoration(
                 labelText: 'บันทึกน้ำหนักวันนี้',
                 suffixText: 'กก.',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                filled: true,
+                fillColor: Colors.white,
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(
+                      color: backgroundHead,
+                      width: 1.5), // ขอบสีเทาเมื่อไม่ได้ focus
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
             ),
             const SizedBox(height: 10),
@@ -246,10 +265,17 @@ class _WeightControlScreenState extends State<WeightControlScreen> {
               children: [
                 ElevatedButton(
                   onPressed: () => _selectDate(context),
-                  child: Text("เลือกวันที่"),
+                  child: Text(
+                    "เลือกวันที่",
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: backgroundPink,
+                  ),
                 ),
                 const SizedBox(width: 10),
-                Text("${selectedDate.toLocal()}".split(' ')[0], style: TextStyle(fontSize: 16)),
+                Text("${selectedDate.toLocal()}".split(' ')[0],
+                    style: TextStyle(fontSize: 16)),
               ],
             ),
             const SizedBox(height: 10),
@@ -257,13 +283,14 @@ class _WeightControlScreenState extends State<WeightControlScreen> {
             ElevatedButton(
               onPressed: saveCurrentWeight,
               style: ElevatedButton.styleFrom(
-                iconColor: Colors.green,
+                backgroundColor: backgroundGreen,
                 padding: EdgeInsets.symmetric(horizontal: 30, vertical: 10),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
-              child: const Text('บันทึก', style: TextStyle(color: Colors.white)),
+              child:
+                  const Text('บันทึก', style: TextStyle(color: Colors.white)),
             ),
 
             const SizedBox(height: 20),
@@ -272,14 +299,18 @@ class _WeightControlScreenState extends State<WeightControlScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Color(0xFFFFD966),
+                color: const Color.fromARGB(255, 182, 223, 235),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
                 children: [
                   DropdownButtonFormField<String>(
                     value: goalType,
-                    items: <String>['Select Occupation', 'ลดน้ำหนัก', 'เพิ่มน้ำหนัก'].map((String value) {
+                    items: <String>[
+                      'Select Occupation',
+                      'ลดน้ำหนัก',
+                      'เพิ่มน้ำหนัก'
+                    ].map((String value) {
                       return DropdownMenuItem<String>(
                         value: value,
                         child: Text(value),
@@ -292,7 +323,14 @@ class _WeightControlScreenState extends State<WeightControlScreen> {
                     },
                     decoration: InputDecoration(
                       labelText: 'เป้าหมาย',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      filled: true,
+                      fillColor: Colors.white,
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(
+                            color: backgroundHead,
+                            width: 1.5), // ขอบสีเทาเมื่อไม่ได้ focus
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -302,7 +340,14 @@ class _WeightControlScreenState extends State<WeightControlScreen> {
                     decoration: InputDecoration(
                       labelText: 'น้ำหนักที่ต้องการ',
                       suffixText: 'กก.',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      filled: true,
+                      fillColor: Colors.white,
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: BorderSide(
+                            color: backgroundHead,
+                            width: 1.5), // ขอบสีเทาเมื่อไม่ได้ focus
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
                     onChanged: (value) {
                       setState(() {
@@ -311,7 +356,6 @@ class _WeightControlScreenState extends State<WeightControlScreen> {
                     },
                   ),
                   const SizedBox(height: 10),
-
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -322,6 +366,9 @@ class _WeightControlScreenState extends State<WeightControlScreen> {
                         max: 12,
                         divisions: 11,
                         label: targetDuration.toInt().toString(),
+                        activeColor: const Color.fromARGB(
+                            255, 15, 70, 116), // สีของแถบที่มีการเลือกแล้ว
+                        inactiveColor: Colors.white,
                         onChanged: (value) {
                           setState(() {
                             targetDuration = value;
@@ -330,13 +377,13 @@ class _WeightControlScreenState extends State<WeightControlScreen> {
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 10),
                   ElevatedButton(
                     onPressed: saveGoalData,
                     style: ElevatedButton.styleFrom(
-                      iconColor: Colors.black,
-                      padding: EdgeInsets.symmetric(horizontal: 50, vertical: 12),
+                      backgroundColor: backgroundYellow,
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 50, vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
