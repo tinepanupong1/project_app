@@ -5,6 +5,7 @@ import 'package:percent_indicator/percent_indicator.dart';
 import 'package:project_app/component/constant.dart';
 import 'package:project_app/screen/bottom_navbar.dart';
 import 'package:project_app/screen/goal_screen.dart';
+import 'package:project_app/screen/planmenuscreen.dart';
 import 'fooddiaryscreen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -371,65 +372,74 @@ class FoodDiaryCard extends StatelessWidget {
 class MenuPlanningCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: backgroundYellow,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.5),
-            spreadRadius: 2,
-            blurRadius: 5,
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Image.asset(
-            'assets/images/healthy.png',
-            width: 100,
-            height: 100,
-            fit: BoxFit.cover,
-          ),
-          const SizedBox(width: 16),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Menu Planning',
-                style: TextStyle(
-                  color: backgroundHead,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                    vertical: 4.0, horizontal: 8.0),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Text(
-                  'มื้อเที่ยงวันนี้',
+    return GestureDetector(
+      onTap: () {
+        // ใช้ Navigator.push เพื่อไปที่หน้า PlanMenuScreen
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => PlanMenuScreen()), // สร้าง Route ไปยังหน้าจอ PlanMenuScreen
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: backgroundYellow,
+          borderRadius: BorderRadius.circular(15),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.5),
+              spreadRadius: 2,
+              blurRadius: 5,
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Image.asset(
+              'assets/images/healthy.png',
+              width: 100,
+              height: 100,
+              fit: BoxFit.cover,
+            ),
+            const SizedBox(width: 16),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Menu Planning',
                   style: TextStyle(
-                    color: backgroundYellow,
-                    fontSize: 14,
+                    color: backgroundHead,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'ก๋วยเตี๋ยวต้มยำ',
-                style: TextStyle(
-                  color: Colors.white,
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      vertical: 4.0, horizontal: 8.0),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Text(
+                    'มื้อเที่ยงวันนี้',
+                    style: TextStyle(
+                      color: backgroundYellow,
+                      fontSize: 14,
+                    ),
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ],
+                const SizedBox(height: 8),
+                const Text(
+                  'ก๋วยเตี๋ยวต้มยำ',
+                  style: TextStyle(
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
