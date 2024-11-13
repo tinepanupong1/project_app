@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:project_app/screen/waterscreen.dart';
 import 'package:project_app/screen/weight_control_screen.dart'; // import weight control screen
 import 'package:project_app/screen/maintain_weight_screen.dart'; // import maintain weight screen
+import 'package:project_app/screen/homescreen.dart'; // import HomeScreen
 
 class GoalScreen extends StatefulWidget {
   @override
@@ -127,9 +128,12 @@ class _GoalScreenState extends State<GoalScreen> {
             // ปุ่มย้อนกลับ
             FloatingActionButton(
               onPressed: () {
-                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => HomeScreen()), // ไปยังหน้า HomeScreen
+                );
               },
-              backgroundColor: Colors.red,
+              backgroundColor: Colors.red, // ปรับสีของปุ่มกลับเป็นสีแดง
               child: const Icon(Icons.arrow_back),
             ),
           ],

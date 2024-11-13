@@ -1,7 +1,8 @@
+//profilescreen
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:fl_chart/fl_chart.dart'; // fl_chart package
+import 'package:fl_chart/fl_chart.dart';
 import 'package:project_app/component/constant.dart';
 import 'package:project_app/screen/homescreen.dart';
 
@@ -60,11 +61,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
       builder: (BuildContext context) {
         return AlertDialog(
           backgroundColor: backgroundColor,
-          title: const Text('Edit Profile',
-          style: TextStyle(fontFamily: 'Jua',
-          fontSize: 30,
-          fontWeight: FontWeight.w500,
-          color: Color(0xFF2A505A),),
+          title: const Text(
+            'Edit Profile',
+            style: TextStyle(
+              fontFamily: 'Jua',
+              fontSize: 30,
+              fontWeight: FontWeight.w500,
+              color: Color(0xFF2A505A),
+            ),
           ),
           content: SingleChildScrollView(
             child: Column(
@@ -74,22 +78,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 _buildTextField('Age', ageController),
                 _buildTextField('Weight', weightController),
                 _buildTextField('Height', heightController),
-                _buildTextField('Disease', diseaseController),
+                _buildDiseaseDropdown(),
                 _buildTextField('Allergy', allergyController),
-                _buildActivityDropdown(), // Add Dropdown for Activity
+                _buildActivityDropdown(),
               ],
             ),
           ),
           actions: [
             TextButton(
-              child: const Text('Cancel',
-              style: TextStyle(color: Colors.redAccent),),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.redAccent),
+              ),
               onPressed: () {
                 Navigator.of(context).pop();
               },
             ),
             TextButton(
-              child: const Text('Save',style:TextStyle(color: Colors.green) ,),
+              child: const Text(
+                'Save',
+                style: TextStyle(color: Colors.green),
+              ),
               onPressed: () async {
                 // Update data in Firestore
                 await FirebaseFirestore.instance
@@ -103,7 +112,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   'height': double.tryParse(heightController.text) ?? 0.0,
                   'disease': diseaseController.text,
                   'allergies': allergyController.text,
-                  'activity': activityController.text, // Update activity value
+                  'activity': activityController.text,
                 });
 
                 // Update UI immediately
@@ -123,6 +132,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return TextField(
       controller: controller,
       decoration: InputDecoration(labelText: label),
+    );
+  }
+
+  Widget _buildDiseaseDropdown() {
+    List<String> diseases = [
+      'โรคอ้วน',
+      'โรคไต',
+      'โรคความดันโลหิตสูง',
+      'ไม่เป็นโรค',
+    ];
+
+    return DropdownButtonFormField<String>(
+      decoration: InputDecoration(labelText: 'Disease'),
+      value: diseaseController.text.isEmpty ? null : diseaseController.text,
+      onChanged: (String? newValue) {
+        setState(() {
+          diseaseController.text = newValue ?? '';
+        });
+      },
+      isExpanded: true,
+      items: diseases.map<DropdownMenuItem<String>>((String value) {
+        return DropdownMenuItem<String>(
+          value: value,
+          child: Text(
+            value,
+            overflow: TextOverflow.clip,
+          ),
+        );
+      }).toList(),
     );
   }
 
@@ -147,7 +185,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       items: activities.map<DropdownMenuItem<String>>((String value) {
         return DropdownMenuItem<String>(
           value: value,
-          child: Text(value,overflow: TextOverflow.clip,),
+          child: Text(
+            value,
+            overflow: TextOverflow.clip,
+          ),
         );
       }).toList(),
     );
@@ -168,6 +209,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
           fontSize: 30,
           fontWeight: FontWeight.w500,
           color: Color(0xFF2A505A),
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const HomeScreen()),
+            );
+          },
         ),
       ),
       body: SingleChildScrollView(
@@ -231,23 +281,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               allergy: allergyController.text,
               activity: activityController.text,
               bmi: bmi,
-              onEdit: _editProfile, // Edit function
+              onEdit: _editProfile,
             ),
           ],
-        ),
-      ),
-      floatingActionButton: Container(
-        alignment: Alignment.bottomCenter,
-        margin: const EdgeInsets.only(bottom: 16), // Adjust margin as needed
-        child: FloatingActionButton(
-          onPressed: () {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => const HomeScreen()), // Use pushReplacement to calculate TDEE again
-            );
-          },
-          backgroundColor: Colors.red,
-          child: const Icon(Icons.arrow_back),
         ),
       ),
     );
@@ -306,7 +342,7 @@ class ProfileCard extends StatelessWidget {
               ),
               IconButton(
                 icon: const Icon(Icons.edit, color: Color(0xFF2A505A)),
-                onPressed: onEdit, // Call edit function
+                onPressed: onEdit,
               ),
             ],
           ),
@@ -342,16 +378,19 @@ class ProfileCard extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
-        crossAxisAlignment:CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             '$label: ',
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
-          Expanded(child:Text(value, style: const TextStyle(fontSize: 16),
-          overflow: TextOverflow.clip),
-          
-          ) 
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(fontSize: 16),
+              overflow: TextOverflow.clip,
+            ),
+          ),
         ],
       ),
     );

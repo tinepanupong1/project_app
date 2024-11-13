@@ -22,13 +22,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    fetchUserData(); // ดึงข้อมูลผู้ใช้จาก Firestore
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    fetchUserData(); // คำนวณ TDEE ใหม่ทุกครั้งที่กลับมาที่หน้า HomeScreen
+    fetchUserData(); // ดึงข้อมูลผู้ใช้จาก Firestore และคำนวณ TDEE
   }
 
   Future<void> fetchUserData() async {
@@ -47,9 +41,10 @@ class _HomeScreenState extends State<HomeScreen> {
       int age = userDocument['age'];
       String disease = userDocument['disease'];
       String activity = userDocument['activity'];
+      String goalType = userDocument['goalType'] ?? 'Select Occupation'; // goalType
 
       // คำนวณและบันทึก TDEE
-      calculateAndSaveTDEE(gender, weight, height, age, disease, activity);
+      calculateAndSaveTDEE(gender, weight, height, age, disease, activity, goalType);
     }
   }
 
@@ -96,10 +91,17 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void calculateAndSaveTDEE(String gender, double weight, double height, int age, String disease, String selectedActivity) {
+  void calculateAndSaveTDEE(String gender, double weight, double height, int age, String disease, String selectedActivity, String goalType) {
     double bmr = calculateBMR(gender, weight, height, age, disease);
     double activityFactor = getActivityFactor(selectedActivity);
     double calculatedTDEE = bmr * activityFactor;
+
+    // ปรับ TDEE ตาม goalType
+    if (goalType == 'เพิ่มน้ำหนัก') {
+      calculatedTDEE += 500; // เพิ่ม TDEE 500
+    } else if (goalType == 'ลดน้ำหนัก') {
+      calculatedTDEE -= 500; // ลด TDEE 500
+    }
 
     setState(() {
       tdee = calculatedTDEE; // อัปเดตค่า TDEE ใน state
@@ -126,6 +128,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
+        automaticallyImplyLeading: false, // ซ่อนปุ่มย้อนกลับ
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: const Text('Meal Master'),
@@ -287,7 +290,6 @@ class GoalAndDiaryRow extends StatelessWidget {
         Expanded(child: FoodDiaryCard()),
       ],
     );
-    
   }
 }
 
@@ -298,7 +300,7 @@ class GoalCard extends StatelessWidget {
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => GoalScreen()), // เชื่อมต่อไปยังหน้า GoalScreen
+          MaterialPageRoute(builder: (context) => GoalScreen()), 
         );
       },
       child: Container(
@@ -328,7 +330,6 @@ class GoalCard extends StatelessWidget {
     );
   }
 }
-
 
 class FoodDiaryCard extends StatelessWidget {
   @override
@@ -374,7 +375,6 @@ class MenuPlanningCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        // ใช้ Navigator.push เพื่อไปที่หน้า PlanMenuScreen
         Navigator.push(
           context,
           MaterialPageRoute(builder: (context) => PlanMenuScreen()), // สร้าง Route ไปยังหน้าจอ PlanMenuScreen
