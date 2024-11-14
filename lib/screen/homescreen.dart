@@ -34,17 +34,19 @@ class _HomeScreenState extends State<HomeScreen> {
           .doc(user.uid)
           .get();
 
-      // ดึงค่าที่จำเป็นจาก Firestore
-      String gender = userDocument['gender'];
-      double weight = userDocument['weight'];
-      double height = userDocument['height'];
-      int age = userDocument['age'];
-      String disease = userDocument['disease'];
-      String activity = userDocument['activity'];
-      String goalType = userDocument['goalType'] ?? 'Select Occupation'; // goalType
+      setState(() {
+        // แปลงข้อมูล Firestore ให้เป็น double ด้วยการใช้ as num และแปลงเป็น double
+        String gender = userDocument['gender'];
+        double weight = (userDocument['weight'] as num).toDouble();
+        double height = (userDocument['height'] as num).toDouble();
+        int age = userDocument['age'];
+        String disease = userDocument['disease'];
+        String activity = userDocument['activity'];
+        String goalType = userDocument['goalType'] ?? 'Select Occupation'; // goalType
 
-      // คำนวณและบันทึก TDEE
-      calculateAndSaveTDEE(gender, weight, height, age, disease, activity, goalType);
+        // คำนวณและบันทึก TDEE
+        calculateAndSaveTDEE(gender, weight, height, age, disease, activity, goalType);
+      });
     }
   }
 
@@ -216,7 +218,7 @@ class CalorieCard extends StatelessWidget {
             footer: Padding(
               padding: const EdgeInsets.only(top: 16.0),
               child: Text(
-                '$tdee cal', // แสดงค่า TDEE ที่ดึงจาก Firebase
+                '${tdee.toStringAsFixed(3)} cal', // แสดงค่า TDEE ด้วยทศนิยม 3 ตำแหน่ง
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 16,
@@ -246,7 +248,7 @@ class CalorieCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 5),
                   Text(
-                    'ทานไปแล้ว $consumedCalories cal',
+                    'ทานไปแล้ว ${consumedCalories.toStringAsFixed(3)} cal', // ทศนิยม 3 ตำแหน่ง
                     style: const TextStyle(color: Colors.white, fontSize: 16),
                   ),
                 ],
@@ -267,7 +269,7 @@ class CalorieCard extends StatelessWidget {
                   ],
                 ),
                 child: Text(
-                  'เหลือ $remainingCalories cal',
+                  'เหลือ ${remainingCalories.toStringAsFixed(3)} cal', // ทศนิยม 3 ตำแหน่ง
                   style: const TextStyle(color: Colors.white, fontSize: 14),
                 ),
               ),
@@ -336,7 +338,6 @@ class FoodDiaryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        // ใช้ Navigator.push เพื่อไปที่หน้า FoodDiaryScreen
         Navigator.push(
           context,
           MaterialPageRoute(builder: (context) => FoodDiaryScreen()), // สร้าง Route ไปยังหน้าจอ FoodDiaryScreen

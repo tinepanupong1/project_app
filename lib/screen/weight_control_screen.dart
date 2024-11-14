@@ -12,8 +12,7 @@ class WeightControlScreen extends StatefulWidget {
 class _WeightControlScreenState extends State<WeightControlScreen> {
   double currentWeight = 0.0; // น้ำหนักปัจจุบันที่ดึงจาก Firebase
   double goalWeight = 0.0; // น้ำหนักเป้าหมายที่ตั้งไว้
-  String goalType =
-      'Select Occupation'; // ประเภทเป้าหมาย (ลดน้ำหนัก/เพิ่มน้ำหนัก)
+  String goalType = 'Select Occupation'; // ประเภทเป้าหมาย (ลดน้ำหนัก/เพิ่มน้ำหนัก)
   double targetDuration = 12; // ระยะเวลาเริ่มต้น (สัปดาห์) ที่เลือกจาก Slider
   final TextEditingController currentWeightController = TextEditingController();
   final TextEditingController goalWeightController = TextEditingController();
@@ -26,54 +25,55 @@ class _WeightControlScreenState extends State<WeightControlScreen> {
     fetchUserData(); // ดึงข้อมูลจาก Firebase เมื่อเริ่มใช้งาน
   }
 
-  Future<void> fetchUserData() async {
-    User? user = FirebaseAuth.instance.currentUser;
+Future<void> fetchUserData() async {
+  User? user = FirebaseAuth.instance.currentUser;
 
-    if (user != null) {
-      var userDocument = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .get();
+  if (user != null) {
+    var userDocument = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .get();
 
-      setState(() {
-        currentWeight = userDocument['weight'];
-        goalWeight = userDocument['goalWeight'] ?? 0.0;
-        targetDuration = userDocument['targetDuration']?.toDouble() ?? 12.0;
-        goalType = userDocument['goalType'] ?? 'Select Occupation';
-      });
+    setState(() {
+      currentWeight = (userDocument['weight'] as num).toDouble();  // ใช้ as num ก่อนแปลงเป็น double
+      goalWeight = (userDocument['goalWeight'] as num?)?.toDouble() ?? 0.0;  // ใช้ as num ก่อนแปลงเป็น double พร้อม fallback
+      targetDuration = (userDocument['targetDuration'] as num?)?.toDouble() ?? 12.0;
+      goalType = userDocument['goalType'] ?? 'Select Occupation';
+    });
 
-      currentWeightController.text = currentWeight.toString();
-      goalWeightController.text = goalWeight.toString();
+    currentWeightController.text = currentWeight.toString();
+    goalWeightController.text = goalWeight.toString();
 
-      // ดึงข้อมูลประวัติกราฟน้ำหนัก
-      var weightHistorySnapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('weightHistory')
-          .orderBy('date', descending: false)
-          .get();
+    // ดึงข้อมูลประวัติกราฟน้ำหนัก
+    var weightHistorySnapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('weightHistory')
+        .orderBy('date', descending: false)
+        .get();
 
-      List<FlSpot> newDataPoints = [];
-      int index = 0;
+    List<FlSpot> newDataPoints = [];
+    int index = 0;
 
-      for (var doc in weightHistorySnapshot.docs) {
-        double weight = doc['weight'];
-        newDataPoints.add(FlSpot(index.toDouble(), weight));
-        index++;
-      }
+    for (var doc in weightHistorySnapshot.docs) {
+      double weight = (doc['weight'] as num).toDouble(); // ใช้ as num ก่อนแปลงเป็น double
+      newDataPoints.add(FlSpot(index.toDouble(), weight));
+      index++;
+    }
 
-      setState(() {
-        weightDataPoints = newDataPoints;
-      });
+    setState(() {
+      weightDataPoints = newDataPoints;
+    });
 
-      // ตรวจสอบว่าถึงเป้าหมายหรือยัง
-      if (currentWeight == goalWeight) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("ยินดีด้วย! คุณบรรลุเป้าหมายแล้ว")),
-        );
-      }
+    // ตรวจสอบว่าถึงเป้าหมายหรือยัง
+    if (currentWeight == goalWeight) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("ยินดีด้วย! คุณบรรลุเป้าหมายแล้ว")),
+      );
     }
   }
+}
+
 
   Future<void> saveCurrentWeight() async {
     User? user = FirebaseAuth.instance.currentUser;
@@ -137,8 +137,7 @@ class _WeightControlScreenState extends State<WeightControlScreen> {
     // แจ้งเตือนหากเป้าหมายเกินขีดจำกัดความปลอดภัย
     if (weightDiff > maxAllowedChange) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text("เป้าหมายเกินขีดจำกัดความปลอดภัย กรุณาปรับเป้าหมาย")),
+        SnackBar(content: Text("เป้าหมายเกินขีดจำกัดความปลอดภัย กรุณาปรับเป้าหมาย")),
       );
     } else {
       User? user = FirebaseAuth.instance.currentUser;
@@ -182,8 +181,7 @@ class _WeightControlScreenState extends State<WeightControlScreen> {
     return Scaffold(
       backgroundColor: Color(0xFFFFF7EB), // สีพื้นหลัง
       appBar: AppBar(
-        title:
-            const Text('ควบคุมน้ำหนัก', style: TextStyle(color: Colors.black)),
+        title: const Text('ควบคุมน้ำหนัก', style: TextStyle(color: Colors.black)),
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
@@ -199,7 +197,6 @@ class _WeightControlScreenState extends State<WeightControlScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // แสดงน้ำหนักปัจจุบันและเป้าหมาย
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -211,8 +208,6 @@ class _WeightControlScreenState extends State<WeightControlScreen> {
               ],
             ),
             const SizedBox(height: 10),
-
-            // กราฟน้ำหนัก
             Container(
               height: 180,
               color: Colors.orange.shade50,
@@ -232,8 +227,7 @@ class _WeightControlScreenState extends State<WeightControlScreen> {
                             colors: [Colors.orange],
                             barWidth: 3,
                             belowBarData: BarAreaData(
-                                show: true,
-                                colors: [Colors.orange.withOpacity(0.3)]),
+                                show: true, colors: [Colors.orange.withOpacity(0.3)]),
                             dotData: FlDotData(show: true),
                           ),
                         ],
@@ -241,8 +235,6 @@ class _WeightControlScreenState extends State<WeightControlScreen> {
                     ),
             ),
             const SizedBox(height: 20),
-
-            // ช่องกรอกน้ำหนักวันนี้
             TextField(
               controller: currentWeightController,
               keyboardType: TextInputType.number,
@@ -253,14 +245,12 @@ class _WeightControlScreenState extends State<WeightControlScreen> {
                 fillColor: Colors.white,
                 enabledBorder: OutlineInputBorder(
                   borderSide: BorderSide(
-                      color: backgroundHead,
-                      width: 1.5), // ขอบสีเทาเมื่อไม่ได้ focus
+                      color: backgroundHead, width: 1.5), // ขอบสีเทาเมื่อไม่ได้ focus
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
             ),
             const SizedBox(height: 10),
-
             Row(
               children: [
                 ElevatedButton(
@@ -279,7 +269,6 @@ class _WeightControlScreenState extends State<WeightControlScreen> {
               ],
             ),
             const SizedBox(height: 10),
-
             ElevatedButton(
               onPressed: saveCurrentWeight,
               style: ElevatedButton.styleFrom(
@@ -289,13 +278,9 @@ class _WeightControlScreenState extends State<WeightControlScreen> {
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
-              child:
-                  const Text('บันทึก', style: TextStyle(color: Colors.white)),
+              child: const Text('บันทึก', style: TextStyle(color: Colors.white)),
             ),
-
             const SizedBox(height: 20),
-
-            // ส่วนการตั้งค่าน้ำหนักเป้าหมายและระยะเวลา
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -327,8 +312,7 @@ class _WeightControlScreenState extends State<WeightControlScreen> {
                       fillColor: Colors.white,
                       enabledBorder: OutlineInputBorder(
                         borderSide: BorderSide(
-                            color: backgroundHead,
-                            width: 1.5), // ขอบสีเทาเมื่อไม่ได้ focus
+                            color: backgroundHead, width: 1.5),
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
@@ -344,8 +328,7 @@ class _WeightControlScreenState extends State<WeightControlScreen> {
                       fillColor: Colors.white,
                       enabledBorder: OutlineInputBorder(
                         borderSide: BorderSide(
-                            color: backgroundHead,
-                            width: 1.5), // ขอบสีเทาเมื่อไม่ได้ focus
+                            color: backgroundHead, width: 1.5),
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
@@ -366,8 +349,7 @@ class _WeightControlScreenState extends State<WeightControlScreen> {
                         max: 12,
                         divisions: 11,
                         label: targetDuration.toInt().toString(),
-                        activeColor: const Color.fromARGB(
-                            255, 15, 70, 116), // สีของแถบที่มีการเลือกแล้ว
+                        activeColor: const Color.fromARGB(255, 15, 70, 116),
                         inactiveColor: Colors.white,
                         onChanged: (value) {
                           setState(() {
@@ -382,8 +364,7 @@ class _WeightControlScreenState extends State<WeightControlScreen> {
                     onPressed: saveGoalData,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: backgroundYellow,
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 50, vertical: 12),
+                      padding: EdgeInsets.symmetric(horizontal: 50, vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
