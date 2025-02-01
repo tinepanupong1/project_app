@@ -3,22 +3,20 @@ import 'package:flutter/material.dart';
 class MenuScreen extends StatefulWidget {
   final String foodName;
   final num calories;
+  final String imageUrl;
 
-  MenuScreen({required this.foodName, required this.calories});
+  MenuScreen({required this.foodName, required this.calories, required this.imageUrl});
 
   @override
   _MenuScreenState createState() => _MenuScreenState();
 }
 
 class _MenuScreenState extends State<MenuScreen> {
-  int plateCount = 1; // จำนวนจานเริ่มต้นที่ 1
+  int plateCount = 1;
 
   @override
   Widget build(BuildContext context) {
-    // คำนวณแคลอรี่รวมตามจำนวนจาน
     final totalCalories = widget.calories * plateCount;
-
-    // คำนวณเวลาการออกกำลังกายตามแคลอรี่รวม
     final runMinutes = (totalCalories / 10).toStringAsFixed(0);
     final bikeMinutes = (totalCalories / 7).toStringAsFixed(0);
     final swimMinutes = (totalCalories / 13).toStringAsFixed(0);
@@ -40,7 +38,7 @@ class _MenuScreenState extends State<MenuScreen> {
         leading: IconButton(
           icon: const Icon(Icons.close, color: Colors.red),
           onPressed: () {
-            Navigator.pop(context); // ปิดหน้าจอ
+            Navigator.pop(context);
           },
         ),
       ),
@@ -49,11 +47,31 @@ class _MenuScreenState extends State<MenuScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Image.asset(
-              'assets/images/dish.png',
-              height: 200,
-              width: 200,
-              fit: BoxFit.cover,
+            // ✅ เพิ่มเงาให้กับขอบรูป
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(15), // ทำให้รูปมีมุมโค้งมน
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2), // เงาสีดำแบบอ่อน
+                    spreadRadius: 2, // การกระจายของเงา
+                    blurRadius: 8, // ความเบลอของเงา
+                    offset: Offset(0, 4), // ตำแหน่งของเงา (ลงล่าง)
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(15),
+                child: Image.network(
+                  widget.imageUrl + "?t=${DateTime.now().millisecondsSinceEpoch}",
+                  height: 200,
+                  width: 200,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return const Icon(Icons.image_not_supported, size: 200, color: Colors.grey);
+                  },
+                ),
+              ),
             ),
             const SizedBox(height: 20),
             Text(
