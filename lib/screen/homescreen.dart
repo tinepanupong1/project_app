@@ -16,107 +16,95 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  double tdee = 0; // ค่าเริ่มต้นของ TDEE
-  double consumedCalories = 680; // ตัวอย่างค่าที่บริโภคไปแล้ว
+  double tdee = 0;
+  double consumedCalories = 680;
 
   @override
   void initState() {
     super.initState();
-    fetchUserData(); // ดึงข้อมูลผู้ใช้จาก Firestore และคำนวณ TDEE
+    fetchUserData();
   }
 
   Future<void> fetchUserData() async {
     User? user = FirebaseAuth.instance.currentUser;
-
     if (user != null) {
       var userDocument = await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
           .get();
 
-      setState(() {
-        // แปลงข้อมูล Firestore ให้เป็น double ด้วยการใช้ as num และแปลงเป็น double
+      if (userDocument.exists && userDocument.data() != null) {
         String gender = userDocument['gender'];
         double weight = (userDocument['weight'] as num).toDouble();
         double height = (userDocument['height'] as num).toDouble();
         int age = userDocument['age'];
         String disease = userDocument['disease'];
         String activity = userDocument['activity'];
-        String goalType = userDocument['goalType'] ?? 'Select Occupation'; // goalType
 
-        // คำนวณและบันทึก TDEE
-        calculateAndSaveTDEE(gender, weight, height, age, disease, activity, goalType);
-      });
+        // ตรวจสอบว่า goalType มีอยู่หรือไม่
+        String? goalType = userDocument.data()?.containsKey('goalType') == true
+            ? userDocument['goalType']
+            : null;
+
+        double calculatedTDEE = calculateAndSaveTDEE(
+          gender, weight, height, age, disease, activity, goalType
+        );
+
+        setState(() {
+          tdee = calculatedTDEE;
+        });
+
+        await saveTDEEToFirestore(calculatedTDEE);
+      }
     }
   }
 
   double calculateBMR(String gender, double weight, double height, int age, String disease) {
     double bmr = 0.0;
-
     if (disease == 'โรคอ้วน') {
-      if (gender == 'ชาย') {
-        bmr = (66 + (13.7 * weight) + (5 * height) - (6.8 * age)) - 500;
-      } else {
-        bmr = (665 + (9.6 * weight) + (1.8 * height) - (4.7 * age)) - 500;
-      }
+      bmr = (gender == 'ชาย')
+          ? (66 + (13.7 * weight) + (5 * height) - (6.8 * age)) - 500
+          : (665 + (9.6 * weight) + (1.8 * height) - (4.7 * age)) - 500;
     } else if (disease == 'โรคไต') {
-      if (age < 60) {
-        bmr = 35 * weight;
-      } else {
-        bmr = 30 * weight;
-      }
-    } else if (disease == 'โรคความดันโลหิตสูง' || disease == 'ไม่เป็นโรค') {
-      if (gender == 'ชาย') {
-        bmr = 66 + (13.7 * weight) + (5 * height) - (6.8 * age);
-      } else {
-        bmr = 665 + (9.6 * weight) + (1.8 * height) - (4.7 * age);
-      }
+      bmr = (age < 60) ? 35 * weight : 30 * weight;
+    } else {
+      bmr = (gender == 'ชาย')
+          ? 66 + (13.7 * weight) + (5 * height) - (6.8 * age)
+          : 665 + (9.6 * weight) + (1.8 * height) - (4.7 * age);
     }
-
     return bmr;
   }
 
   double getActivityFactor(String activity) {
     switch (activity) {
-      case 'นั่งทำงานอยู่กับที่และไม่ได้ออกกำลังกายเลย':
-        return 1.2;
-      case 'ออกกำลังกายหรือเล่นกีฬาเล็กน้อยประมาณอาทิตย์ละ 1-3 วัน':
-        return 1.375;
-      case 'ออกกำลังกายหรือเล่นกีฬาปานกลางประมาณอาทิตย์ละ 3-5 วัน':
-        return 1.55;
-      case 'ออกกำลังกายหรือเล่นกีฬาอย่างหนักประมาณอาทิตย์ละ 6-7 วัน':
-        return 1.725;
-      case 'ออกกำลังกายหรือเล่นที่กีฬาอย่างหนักมากทุกวันเช้า และเย็น':
-        return 1.9;
-      default:
-        return 1.0; // ค่าเริ่มต้น
+      case 'นั่งทำงานอยู่กับที่และไม่ได้ออกกำลังกายเลย': return 1.2;
+      case 'ออกกำลังกายหรือเล่นกีฬาเล็กน้อยประมาณอาทิตย์ละ 1-3 วัน': return 1.375;
+      case 'ออกกำลังกายหรือเล่นกีฬาปานกลางประมาณอาทิตย์ละ 3-5 วัน': return 1.55;
+      case 'ออกกำลังกายหรือเล่นกีฬาอย่างหนักประมาณอาทิตย์ละ 6-7 วัน': return 1.725;
+      case 'ออกกำลังกายหรือเล่นที่กีฬาอย่างหนักมากทุกวันเช้า และเย็น': return 1.9;
+      default: return 1.0;
     }
   }
 
-  void calculateAndSaveTDEE(String gender, double weight, double height, int age, String disease, String selectedActivity, String goalType) {
+  double calculateAndSaveTDEE(String gender, double weight, double height, int age, String disease, String selectedActivity, String? goalType) {
     double bmr = calculateBMR(gender, weight, height, age, disease);
     double activityFactor = getActivityFactor(selectedActivity);
     double calculatedTDEE = bmr * activityFactor;
 
-    // ปรับ TDEE ตาม goalType
-    if (goalType == 'เพิ่มน้ำหนัก') {
-      calculatedTDEE += 500; // เพิ่ม TDEE 500
-    } else if (goalType == 'ลดน้ำหนัก') {
-      calculatedTDEE -= 500; // ลด TDEE 500
+    if (goalType != null) {
+      if (goalType == 'เพิ่มน้ำหนัก') {
+        calculatedTDEE += 500;
+      } else if (goalType == 'ลดน้ำหนัก') {
+        calculatedTDEE -= 500;
+      }
     }
-
-    setState(() {
-      tdee = calculatedTDEE; // อัปเดตค่า TDEE ใน state
-    });
-
-    saveTDEEToFirestore(calculatedTDEE); // บันทึกค่า TDEE ลง Firestore
+    return calculatedTDEE;
   }
 
   Future<void> saveTDEEToFirestore(double tdee) async {
     User? user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      String uid = user.uid;
-      await FirebaseFirestore.instance.collection('users').doc(uid).update({
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
         'tdee': tdee,
       });
     }
@@ -130,7 +118,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: AppBar(
-        automaticallyImplyLeading: false, // ซ่อนปุ่มย้อนกลับ
+        automaticallyImplyLeading: false,
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: const Text('Meal Master'),
@@ -170,6 +158,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 }
+
 
 class CalorieCard extends StatelessWidget {
   final double tdee;
