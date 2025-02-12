@@ -1,3 +1,4 @@
+//weight_control_screen.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -10,8 +11,11 @@ class WeightControlScreen extends StatefulWidget {
 }
 
 class _WeightControlScreenState extends State<WeightControlScreen> {
+
   double currentWeight = 0.0; // น้ำหนักปัจจุบันที่ดึงจาก Firebase
   double goalWeight = 0.0; // น้ำหนักเป้าหมายที่ตั้งไว้
+  //final TextEditingController weightController = TextEditingController();
+  
   String goalType = 'Select Occupation'; // ประเภทเป้าหมาย (ลดน้ำหนัก/เพิ่มน้ำหนัก)
   double targetDuration = 12; // ระยะเวลาเริ่มต้น (สัปดาห์) ที่เลือกจาก Slider
   final TextEditingController currentWeightController = TextEditingController();
@@ -34,9 +38,10 @@ Future<void> fetchUserData() async {
         .doc(user.uid)
         .get();
 
+    // ดึงข้อมูลน้ำหนักและเป้าหมายจากเอกสารของผู้ใช้
     setState(() {
-      currentWeight = (userDocument['weight'] as num).toDouble();  // ใช้ as num ก่อนแปลงเป็น double
-      goalWeight = (userDocument['goalWeight'] as num?)?.toDouble() ?? 0.0;  // ใช้ as num ก่อนแปลงเป็น double พร้อม fallback
+      currentWeight = (userDocument['weight'] as num).toDouble();
+      goalWeight = (userDocument['goalWeight'] as num?)?.toDouble() ?? 0.0;
       targetDuration = (userDocument['targetDuration'] as num?)?.toDouble() ?? 12.0;
       goalType = userDocument['goalType'] ?? 'Select Occupation';
     });
@@ -55,6 +60,7 @@ Future<void> fetchUserData() async {
     List<FlSpot> newDataPoints = [];
     int index = 0;
 
+    // แปลงข้อมูลจาก weightHistory เป็น FlSpot สำหรับกราฟ
     for (var doc in weightHistorySnapshot.docs) {
       double weight = (doc['weight'] as num).toDouble(); // ใช้ as num ก่อนแปลงเป็น double
       newDataPoints.add(FlSpot(index.toDouble(), weight));
@@ -73,6 +79,7 @@ Future<void> fetchUserData() async {
     }
   }
 }
+
 
 
   Future<void> saveCurrentWeight() async {
@@ -294,7 +301,8 @@ Future<void> fetchUserData() async {
                     items: <String>[
                       'Select Occupation',
                       'ลดน้ำหนัก',
-                      'เพิ่มน้ำหนัก'
+                      'เพิ่มน้ำหนัก',
+                      
                     ].map((String value) {
                       return DropdownMenuItem<String>(
                         value: value,
@@ -382,4 +390,4 @@ Future<void> fetchUserData() async {
       ),
     );
   }
-}
+}  
