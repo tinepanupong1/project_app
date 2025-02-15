@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 class MenuScreen extends StatefulWidget {
   final String foodName;
@@ -13,6 +14,167 @@ class MenuScreen extends StatefulWidget {
 
 class _MenuScreenState extends State<MenuScreen> {
   int plateCount = 1;
+  late final String cachedImageUrl;
+  List<Map<String, dynamic>> foodDiaryList = [];
+  DateTime selectedDate = DateTime.now();
+  String selectedMeal = 'เช้า';
+
+  @override
+  void initState() {
+    super.initState();
+    cachedImageUrl = widget.imageUrl;
+  }
+
+  void _showFoodDiaryDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(30),
+          ),
+          backgroundColor: Colors.transparent,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(15),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.8), // เปลี่ยนเป็นโปร่งใสสีขาวแบบภาพที่ 1
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+                ),
+                child: Center(
+                  child: Text(
+                    'บันทึกลง Food Diary',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.all(20),
+                width: MediaQuery.of(context).size.width * 0.85,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'เลือกวันที่',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey),
+                    ),
+                    GestureDetector(
+                      onTap: () async {
+                        DateTime? pickedDate = await showDatePicker(
+                          context: context,
+                          initialDate: selectedDate,
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime(2030),
+                        );
+                        if (pickedDate != null) {
+                          setState(() {
+                            selectedDate = pickedDate;
+                          });
+                          Navigator.pop(context);
+                          _showFoodDiaryDialog();
+                        }
+                      },
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        decoration: BoxDecoration(
+                          border: Border(bottom: BorderSide(color: Colors.black.withOpacity(0.3), width: 1.5)),
+                        ),
+                        child: Text(
+                          DateFormat('dd / MM / yyyy').format(selectedDate),
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      'เลือกมื้ออาหาร',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey),
+                    ),
+                    const SizedBox(height: 5),
+                    DropdownButtonFormField<String>(
+                      value: selectedMeal,
+                      decoration: InputDecoration(
+                        border: InputBorder.none,
+                      ),
+                      items: ['เช้า', 'กลางวัน', 'เย็น', 'ของว่าง']
+                          .map((meal) => DropdownMenuItem(
+                                value: meal,
+                                child: Text(meal, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                              ))
+                          .toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          selectedMeal = value!;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 30),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        TextButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                          },
+                          child: const Text('ยกเลิก',
+                              style: TextStyle(color: Colors.grey, fontSize: 18, fontWeight: FontWeight.bold)),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            _saveToFoodDiary(selectedDate, selectedMeal);
+                            Navigator.pop(context);
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.redAccent,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                            padding: EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                          ),
+                          child: const Text('บันทึก', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+
+  void _saveToFoodDiary(DateTime date, String meal) {
+    setState(() {
+      foodDiaryList.add({
+        'date': '${date.day}/${date.month}/${date.year}',
+        'meal': meal,
+        'food': widget.foodName,
+        'calories': widget.calories * plateCount,
+        'quantity': plateCount,
+      });
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('บันทึก ${widget.foodName} ใน $meal วันที่ ${date.day}/${date.month}/${date.year} แล้ว'),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -47,28 +209,29 @@ class _MenuScreenState extends State<MenuScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // ✅ เพิ่มเงาให้กับขอบรูป
+            // ✅ ปรับให้โหลดรูปแค่ครั้งเดียว
             Container(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(15), // ทำให้รูปมีมุมโค้งมน
+                borderRadius: BorderRadius.circular(15),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.2), // เงาสีดำแบบอ่อน
-                    spreadRadius: 2, // การกระจายของเงา
-                    blurRadius: 8, // ความเบลอของเงา
-                    offset: Offset(0, 4), // ตำแหน่งของเงา (ลงล่าง)
+                    color: Colors.black.withOpacity(0.2),
+                    spreadRadius: 2,
+                    blurRadius: 8,
+                    offset: Offset(0, 4),
                   ),
                 ],
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(15),
                 child: Image.network(
-                  widget.imageUrl + "?t=${DateTime.now().millisecondsSinceEpoch}",
+                  cachedImageUrl,
                   height: 200,
                   width: 200,
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) {
-                    return const Icon(Icons.image_not_supported, size: 200, color: Colors.grey);
+                    return const Icon(Icons.image_not_supported,
+                        size: 200, color: Colors.grey);
                   },
                 ),
               ),
@@ -173,9 +336,7 @@ class _MenuScreenState extends State<MenuScreen> {
             ),
             const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: () {
-                // ฟังก์ชันบันทึกข้อมูลลง Food Diary
-              },
+              onPressed: _showFoodDiaryDialog,
               child: const Text('บันทึกลง Food Diary'),
             ),
           ],
