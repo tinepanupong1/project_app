@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class MenuScreen extends StatefulWidget {
   final String foodName;
@@ -157,24 +161,74 @@ class _MenuScreenState extends State<MenuScreen> {
   }
 
 
-  void _saveToFoodDiary(DateTime date, String meal) {
-    setState(() {
-      foodDiaryList.add({
-        'date': '${date.day}/${date.month}/${date.year}',
-        'meal': meal,
-        'food': widget.foodName,
-        'calories': widget.calories * plateCount,
-        'quantity': plateCount,
-      });
-    });
+void _saveToFoodDiary(DateTime date, String meal) async {
+  FirebaseFirestore firestore = FirebaseFirestore.instance;
+  FirebaseAuth auth = FirebaseAuth.instance;
 
+  User? user = auth.currentUser;
+  if (user == null) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('บันทึก ${widget.foodName} ใน $meal วันที่ ${date.day}/${date.month}/${date.year} แล้ว'),
-        duration: const Duration(seconds: 2),
+        content: Text("กรุณาเข้าสู่ระบบก่อนบันทึกข้อมูล"),
+        duration: Duration(seconds: 2),
+      ),
+    );
+    return;
+  }
+  String userId = user.uid;
+
+  // แปลงวันที่เป็น "yyyy-MM-dd"
+  String formattedDate = "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+
+  // ข้อมูลที่จะบันทึก (❌ **ลบ timestamp ออกจาก arrayUnion()**)
+  Map<String, dynamic> newEntry = {
+    'meal': meal,
+    'food': widget.foodName,
+    'calories': widget.calories * plateCount,
+    'image': widget.imageUrl,
+  };
+
+  try {
+    DocumentReference diaryRef = firestore.collection("users").doc(userId).collection("food_diary").doc(formattedDate);
+
+    // ตรวจสอบว่ามีเอกสารอยู่หรือไม่
+    DocumentSnapshot doc = await diaryRef.get();
+
+    if (doc.exists) {
+      // 🔹 ถ้ามีเอกสารแล้ว ใช้ update()
+      await diaryRef.update({
+        "entries": FieldValue.arrayUnion([newEntry])
+      });
+    } else {
+      // 🔹 ถ้ายังไม่มี ใช้ set() และเพิ่ม timestamp ข้างนอก arrayUnion()
+      await diaryRef.set({
+        "entries": [newEntry],
+        "timestamp": FieldValue.serverTimestamp(), // ✅ ใช้ timestamp ได้ที่นี่
+      });
+    }
+
+    // แจ้งเตือนว่าบันทึกสำเร็จ
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('บันทึก ${widget.foodName} ใน $meal วันที่ $formattedDate แล้ว'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+
+      Navigator.pop(context); // ปิด Dialog
+    }
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('เกิดข้อผิดพลาดในการบันทึกข้อมูล: $e'),
+        duration: Duration(seconds: 2),
       ),
     );
   }
+}
+
+
 
   @override
   Widget build(BuildContext context) {
