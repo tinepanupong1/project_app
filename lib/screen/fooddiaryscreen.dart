@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'searchmenuscreen.dart';
-import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart';
+import 'searchmenuscreen.dart';
 
 class FoodDiaryScreen extends StatefulWidget {
   @override
@@ -14,31 +14,70 @@ class _FoodDiaryScreenState extends State<FoodDiaryScreen> {
   DateTime selectedDate = DateTime.now();
   PageController pageController = PageController(viewportFraction: 0.8, initialPage: 0);
   int currentPage = 0;
+  List<Map<String, dynamic>> foodDiary = [];
 
   String _getFormattedDate(DateTime date) {
     return "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
   }
 
-  Stream<DocumentSnapshot> _getFoodDiaryStream() {
+  void _fetchFoodDiary() async {
     User? user = FirebaseAuth.instance.currentUser;
-    if (user == null) return Stream.empty();
+    if (user == null) return;
 
-    return FirebaseFirestore.instance
+    String formattedDate = _getFormattedDate(selectedDate);
+    DocumentSnapshot docSnapshot = await FirebaseFirestore.instance
         .collection("users")
         .doc(user.uid)
         .collection("food_diary")
-        .doc(_getFormattedDate(selectedDate))
-        .snapshots();
-  }
+        .doc(formattedDate)
+        .get();
 
-  void _onDateSelected(DateTime newDate) {
     setState(() {
-      selectedDate = newDate;
-      currentPage = 0;
+      if (docSnapshot.exists) {
+        Map<String, dynamic> data = docSnapshot.data() as Map<String, dynamic>;
+        foodDiary = List<Map<String, dynamic>>.from(data["entries"] ?? []);
+      } else {
+        foodDiary = [];
+      }
+      currentPage = 0; // รีเซ็ตไปที่มื้อแรกของวันนั้น
       if (pageController.hasClients) {
         pageController.jumpToPage(0);
       }
     });
+  }
+
+  void nextMeal() {
+    if (currentPage < foodDiary.length - 1) {
+      pageController.nextPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    } else {
+      pageController.jumpToPage(0);
+    }
+  }
+
+  void previousMeal() {
+    if (currentPage > 0) {
+      pageController.previousPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    } else {
+      pageController.jumpToPage(foodDiary.length - 1);
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchFoodDiary();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _fetchFoodDiary();
   }
 
   @override
@@ -65,185 +104,145 @@ class _FoodDiaryScreenState extends State<FoodDiaryScreen> {
           ),
         ],
       ),
-      body: StreamBuilder<DocumentSnapshot>(
-        stream: _getFoodDiaryStream(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      body: Column(
+        children: [
+          const SizedBox(height: 20),
 
-          if (!snapshot.hasData || !snapshot.data!.exists) {
-            return const Center(
-              child: Text(
-                "ไม่มีเมนูสำหรับวันนี้",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-            );
-          }
-
-          var data = snapshot.data!.data() as Map<String, dynamic>;
-          if (!data.containsKey("entries") || data["entries"] == null) {
-            return const Center(
-              child: Text(
-                "ไม่มีเมนูสำหรับวันนี้",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-            );
-          }
-
-          List<dynamic> entries = data["entries"];
-          List<Map<String, dynamic>> foodDiary = entries.map((entry) {
-            return {
-              'meal': entry['meal'] ?? "ไม่ระบุ",
-              'food': entry['food'] ?? "ไม่ระบุ",
-              'calories': "${entry['calories'] ?? 0} kcal",
-              'image': entry['image'] ?? 'assets/images/default_food.png',
-            };
-          }).toList();
-
-          return Column(
-            children: [
-              const SizedBox(height: 20),
-
-              // ✅ PageView ที่สามารถเลื่อนได้
-              SizedBox(
-                height: 250,
-                child: PageView.builder(
-                  controller: pageController,
-                  itemCount: foodDiary.length,
-                  onPageChanged: (index) {
-                    setState(() {
-                      currentPage = index;
-                    });
-                  },
-                  itemBuilder: (context, index) {
-                    final currentMeal = foodDiary[index];
-                    return Card(
-                      margin: const EdgeInsets.symmetric(horizontal: 8),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      elevation: 5,
-                      child: Container(
-                        padding: const EdgeInsets.all(16.0),
-                        decoration: BoxDecoration(
-                          color: Colors.greenAccent.shade100,
+          // ✅ PageView ที่สามารถเลื่อนได้
+          foodDiary.isEmpty
+              ? const Center(
+                  child: Text(
+                    "ไม่มีเมนูสำหรับวันนี้",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                )
+              : SizedBox(
+                  height: 250,
+                  child: PageView.builder(
+                    controller: pageController,
+                    itemCount: foodDiary.length,
+                    onPageChanged: (index) {
+                      setState(() {
+                        currentPage = index;
+                      });
+                    },
+                    itemBuilder: (context, index) {
+                      final currentMeal = foodDiary[index];
+                      return Card(
+                        margin: const EdgeInsets.symmetric(horizontal: 8),
+                        shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(15),
-                              child: Image.network(
-                                currentMeal['image'],
-                                height: 120,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Image.asset(
-                                    'assets/images/default_food.png',
-                                    height: 120,
-                                    fit: BoxFit.cover,
-                                  );
-                                },
+                        elevation: 5,
+                        child: Container(
+                          padding: const EdgeInsets.all(16.0),
+                          decoration: BoxDecoration(
+                            color: Colors.greenAccent.shade100,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(15),
+                                child: Image.network(
+                                  currentMeal['image'] ?? 'assets/images/default_food.png',
+                                  height: 120,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Image.asset(
+                                      'assets/images/food.png',
+                                      height: 120,
+                                      fit: BoxFit.cover,
+                                    );
+                                  },
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 10),
-                            Text(
-                              currentMeal['meal'],
-                              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black),
-                            ),
-                            const SizedBox(height: 10),
-                            Container(
-                              padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 12.0),
-                              decoration: BoxDecoration(
-                                color: Colors.redAccent,
-                                borderRadius: BorderRadius.circular(12),
+                              const SizedBox(height: 10),
+                              Text(
+                                currentMeal['meal'] ?? "ไม่ระบุ",
+                                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black),
                               ),
-                              child: Text(
-                                '${currentMeal['food']} : ${currentMeal['calories']}',
-                                style: const TextStyle(fontSize: 16, color: Colors.white),
+                              const SizedBox(height: 10),
+                              Container(
+                                padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 12.0),
+                                decoration: BoxDecoration(
+                                  color: Colors.redAccent,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  '${currentMeal['food'] ?? "ไม่ระบุ"} : ${currentMeal['calories'] ?? "0 kcal"}',
+                                  style: const TextStyle(fontSize: 16, color: Colors.white),
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-
-              // ✅ ปุ่มเลื่อนซ้าย-ขวา
-              const SizedBox(height: 10),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back_ios, color: Colors.pink),
-                    onPressed: () {
-                      if (currentPage > 0) {
-                        pageController.animateToPage(
-                          currentPage - 1,
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeInOut,
-                        );
-                      }
+                      );
                     },
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.arrow_forward_ios, color: Colors.pink),
-                    onPressed: () {
-                      if (currentPage < foodDiary.length - 1) {
-                        pageController.animateToPage(
-                          currentPage + 1,
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeInOut,
-                        );
-                      }
-                    },
-                  ),
-                ],
+                ),
+
+          // ✅ ปุ่มเลื่อนซ้าย-ขวา
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.arrow_back_ios, color: Colors.pink),
+                onPressed: previousMeal,
               ),
-
-              const SizedBox(height: 20),
-
-              // ✅ ปฏิทินที่แสดงด้านล่าง
-              Container(
-                padding: const EdgeInsets.all(16.0),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
-                      blurRadius: 10.0,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    const Text(
-                      'เลือกวันจากปฏิทิน',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black),
-                    ),
-                    const SizedBox(height: 10),
-                    CustomCalendarWidget(
-                      now: now,
-                      selectedDate: selectedDate,
-                      onDateSelected: (date) {
-                        setState(() {
-                          selectedDate = date;
-                        });
-                      },
-                    ),
-                  ],
-                ),
+              IconButton(
+                icon: const Icon(Icons.arrow_forward_ios, color: Colors.pink),
+                onPressed: nextMeal,
               ),
             ],
-          );
-        },
+          ),
+
+          const SizedBox(height: 20),
+
+          // ✅ ปฏิทินที่แสดงด้านล่าง
+          Container(
+            padding: const EdgeInsets.all(16.0),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 10.0,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                const Text(
+                  'เลือกวันจากปฏิทิน',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black),
+                ),
+                const SizedBox(height: 10),
+                CustomCalendarWidget(
+                  now: now,
+                  selectedDate: selectedDate,
+                  onDateSelected: (date) {
+                    setState(() {
+                      selectedDate = date;
+                      currentPage = 0;  // ✅ รีเซ็ตไปที่มื้อแรกของวันนั้น
+                    });
+                    _fetchFoodDiary();
+                    if (pageController.hasClients) {
+                      pageController.jumpToPage(0);
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
+    
+            
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           Navigator.pop(context);
@@ -254,6 +253,7 @@ class _FoodDiaryScreenState extends State<FoodDiaryScreen> {
     );
   }
 }
+
 
 
 class CustomCalendarWidget extends StatelessWidget {
