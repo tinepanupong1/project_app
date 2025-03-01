@@ -39,7 +39,12 @@ class _MaintainWeightScreenState extends State<MaintainWeightScreen> {
 
   Future<void> saveGoalType() async {
     User? user = FirebaseAuth.instance.currentUser;
-
+    if (goalType == 'เพิ่มน้ำหนัก' || goalType == 'ลดน้ำหนัก') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("กรุณายกเลิกเป้าหมายอื่นๆก่อน")),
+      );
+      return;
+    }
     if (user != null) {
       await FirebaseFirestore.instance
           .collection('users')
@@ -50,6 +55,27 @@ class _MaintainWeightScreenState extends State<MaintainWeightScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('บันทึกเป้าหมายรักษาน้ำหนักเรียบร้อย')));
+    }
+  }
+
+  Future<void> cancelGoal() async {
+    User? user = FirebaseAuth.instance.currentUser;
+
+    if (user != null) {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .update({
+        'goalType': null, // ล้าง goalType
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("ยกเลิกเป้าหมายเรียบร้อย")),
+      );
+
+      setState(() {
+        goalType = 'Select Occupation'; // รีเซ็ต goalType
+      });
     }
   }
 
@@ -125,8 +151,8 @@ class _MaintainWeightScreenState extends State<MaintainWeightScreen> {
               ElevatedButton(
                 onPressed: saveGoalType,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: backgroundPink,
-                  padding: EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                  backgroundColor: buttonSave,
+                  padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
@@ -136,10 +162,26 @@ class _MaintainWeightScreenState extends State<MaintainWeightScreen> {
                   style: TextStyle(color: Colors.white, fontSize: 18),
                 ),
               ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: cancelGoal,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: const Text(
+                  'ยกเลิกเป้าหมาย',
+                  style: TextStyle(color: Colors.red, fontSize: 18),
+                ),
+              )
             ],
           ),
         ),
       ),
     );
   }
-} 
+}

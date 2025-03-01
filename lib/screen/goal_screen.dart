@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:project_app/screen/waterscreen.dart';
-import 'package:project_app/screen/weight_control_screen.dart'; // import weight control screen
-import 'package:project_app/screen/maintain_weight_screen.dart'; // import maintain weight screen
-import 'package:project_app/screen/homescreen.dart'; // import HomeScreen
+import 'package:project_app/screen/weight_control_screen.dart';
+import 'package:project_app/screen/maintain_weight_screen.dart';
+import 'package:project_app/screen/homescreen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class GoalScreen extends StatefulWidget {
   @override
@@ -10,6 +12,31 @@ class GoalScreen extends StatefulWidget {
 }
 
 class _GoalScreenState extends State<GoalScreen> {
+  String currentGoalType = ''; // ตัวแปรเก็บ goalType
+
+  @override
+  void initState() {
+    super.initState();
+    fetchGoalType(); // เรียกใช้ฟังก์ชันดึงค่า goalType
+  }
+
+  Future<void> fetchGoalType() async {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      var userDocument = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
+      if (userDocument.exists) {
+        setState(() {
+          // หากใน Firebase ไม่มีฟิลด์ goalType ให้กำหนดค่าเริ่มต้นตามต้องการ เช่น "ยังไม่ได้ตั้งเป้าหมาย"
+          currentGoalType = userDocument['goalType'] ?? 'ยังไม่ได้ตั้งเป้าหมาย';
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -44,6 +71,18 @@ class _GoalScreenState extends State<GoalScreen> {
               ),
             ),
             const SizedBox(height: 20),
+
+            // แสดง goalType ที่ดึงได้จาก Firebase
+            Text(
+              'เป้าหมายปัจจุบัน: $currentGoalType',
+              style: const TextStyle(
+                fontSize: 16,
+                color: Colors.black,
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
             // ปุ่ม ควบคุมน้ำหนัก
             GestureDetector(
               onTap: () {
@@ -130,10 +169,10 @@ class _GoalScreenState extends State<GoalScreen> {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => HomeScreen()), // ไปยังหน้า HomeScreen
+                  MaterialPageRoute(builder: (context) => HomeScreen()),
                 );
               },
-              backgroundColor: Colors.red, // ปรับสีของปุ่มกลับเป็นสีแดง
+              backgroundColor: Colors.red,
               child: const Icon(Icons.arrow_back),
             ),
           ],
