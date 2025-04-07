@@ -6,184 +6,147 @@ import 'package:project_app/screen/homescreen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-class GoalScreen extends StatefulWidget {
-  @override
-  _GoalScreenState createState() => _GoalScreenState();
-}
-
-class _GoalScreenState extends State<GoalScreen> {
-  String currentGoalType = ''; // ตัวแปรเก็บ goalType
-
-  @override
-  void initState() {
-    super.initState();
-    fetchGoalType(); // เรียกใช้ฟังก์ชันดึงค่า goalType
-  }
-
-  Future<void> fetchGoalType() async {
-    User? user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      var userDocument = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .get();
-
-      if (userDocument.exists) {
-        setState(() {
-          // หากใน Firebase ไม่มีฟิลด์ goalType ให้กำหนดค่าเริ่มต้นตามต้องการ เช่น "ยังไม่ได้ตั้งเป้าหมาย"
-          currentGoalType = userDocument['goalType'] ?? 'ยังไม่ได้ตั้งเป้าหมาย';
-        });
-      }
-    }
-  }
-
+class GoalScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final User? user = FirebaseAuth.instance.currentUser;
+
     return Scaffold(
       backgroundColor: const Color(0xFFFDF1E6),
       appBar: AppBar(
-  backgroundColor: Colors.transparent,
-  elevation: 0,
-  leading: IconButton(
-    icon: const Icon(Icons.arrow_back, color: Colors.black),
-    onPressed: () {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => HomeScreen()),
-      );
-    },
-  ),
-  title: const Text('Goal'),
-  centerTitle: true,
-  titleTextStyle: const TextStyle(
-    fontFamily: 'Jua',
-    fontSize: 30,
-    fontWeight: FontWeight.w500,
-    color: Color(0xFF2A505A),
-  ),
-),
-
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => HomeScreen()),
+            );
+          },
+        ),
+        title: const Text('Goal'),
+        centerTitle: true,
+        titleTextStyle: const TextStyle(
+          fontFamily: 'Jua',
+          fontSize: 30,
+          fontWeight: FontWeight.w500,
+          color: Color(0xFF2A505A),
+        ),
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center, // จัดให้อยู่กลางหน้าจอ
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                image: DecorationImage(
-                  image: AssetImage('assets/images/goalH.png'),
-                  fit: BoxFit.cover,
+        child: StreamBuilder<DocumentSnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('users')
+              .doc(user?.uid)
+              .snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Center(child: CircularProgressIndicator());
+            }
+
+            final userData = snapshot.data?.data() as Map<String, dynamic>?;
+
+            final String goalType =
+                userData?['goalType'] ?? 'ยังไม่ได้ตั้งเป้าหมาย';
+
+            return Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Container(
+                  width: 120,
+                  height: 120,
+                  decoration: BoxDecoration(
+                    image: DecorationImage(
+                      image: AssetImage('assets/images/goalH.png'),
+                      fit: BoxFit.cover,
+                    ),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // แสดง goalType ที่ดึงได้จาก Firebase
-            Text(
-              'เป้าหมายปัจจุบัน: $currentGoalType',
-              style: const TextStyle(
-                fontSize: 16,
-                color: Colors.black,
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // ปุ่ม ควบคุมน้ำหนัก
-            GestureDetector(
-              onTap: () {
-                Navigator.push(
+                const SizedBox(height: 20),
+                Text(
+                  'เป้าหมายปัจจุบัน: $goalType',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: Colors.black,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                // ปุ่มต่าง ๆ
+                goalButton(
                   context,
-                  MaterialPageRoute(builder: (context) => WeightControlScreen()),
-                );
-              },
-              child: Container(
-                padding: const EdgeInsets.all(16.0),
-                decoration: BoxDecoration(
+                  icon: Icons.monitor_weight,
+                  text: 'ควบคุมน้ำหนัก',
                   color: Colors.pink.shade100,
-                  borderRadius: BorderRadius.circular(20),
+                  iconColor: Colors.pink.shade600,
+                  destination: WeightControlScreen(),
                 ),
-                child: Row(
-                  children: [
-                    Icon(Icons.monitor_weight, color: Colors.pink.shade600),
-                    const SizedBox(width: 10),
-                    const Text(
-                      'ควบคุมน้ำหนัก',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            // ปุ่ม รักษาน้ำหนัก
-            GestureDetector(
-              onTap: () {
-                Navigator.push(
+                const SizedBox(height: 20),
+                goalButton(
                   context,
-                  MaterialPageRoute(builder: (context) => MaintainWeightScreen()),
-                );
-              },
-              child: Container(
-                padding: const EdgeInsets.all(16.0),
-                decoration: BoxDecoration(
+                  icon: Icons.verified,
+                  text: 'รักษาน้ำหนัก',
                   color: Colors.green.shade100,
-                  borderRadius: BorderRadius.circular(20),
+                  iconColor: Colors.green.shade600,
+                  destination: MaintainWeightScreen(),
                 ),
-                child: Row(
-                  children: [
-                    Icon(Icons.verified, color: Colors.green.shade600),
-                    const SizedBox(width: 10),
-                    const Text(
-                      'รักษาน้ำหนัก',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            // ปุ่ม ดื่มน้ำ
-            GestureDetector(
-              onTap: () {
-                Navigator.push(
+                const SizedBox(height: 20),
+                goalButton(
                   context,
-                  MaterialPageRoute(builder: (context) => Waterscreen()),
-                );
-              },
-              child: Container(
-                padding: const EdgeInsets.all(16.0),
-                decoration: BoxDecoration(
+                  icon: Icons.health_and_safety,
+                  text: 'ดื่มน้ำให้เพียงพอ',
                   color: Colors.orange.shade100,
-                  borderRadius: BorderRadius.circular(20),
+                  iconColor: Colors.orange.shade600,
+                  destination: Waterscreen(),
                 ),
-                child: Row(
-                  children: [
-                    Icon(Icons.health_and_safety, color: Colors.orange.shade600),
-                    const SizedBox(width: 10),
-                    const Text(
-                      'ดื่มน้ำให้เพียงพอ',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                  ],
+                const SizedBox(height: 20),
+                FloatingActionButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => HomeScreen()),
+                    );
+                  },
+                  backgroundColor: Colors.red,
+                  child: const Icon(Icons.arrow_back),
                 ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            // ปุ่มย้อนกลับ
-            FloatingActionButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => HomeScreen()),
-                );
-              },
-              backgroundColor: Colors.red,
-              child: const Icon(Icons.arrow_back),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget goalButton(BuildContext context,
+      {required IconData icon,
+      required String text,
+      required Color color,
+      required Color iconColor,
+      required Widget destination}) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => destination),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16.0),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: iconColor),
+            const SizedBox(width: 10),
+            Text(
+              text,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
           ],
         ),

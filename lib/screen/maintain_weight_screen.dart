@@ -1,4 +1,3 @@
-//maintain_weight_screen.dart
 import 'package:flutter/material.dart';
 import 'package:project_app/component/constant.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -11,7 +10,8 @@ class MaintainWeightScreen extends StatefulWidget {
 
 class _MaintainWeightScreenState extends State<MaintainWeightScreen> {
   double currentWeight = 0.0;
-  String goalType = "รักษาน้ำหนัก";
+  // ถ้าใน Firebase ไม่มี goalType ให้ fallback เป็น "Select Occupation"
+  String goalType = "Select Occupation";
 
   @override
   void initState() {
@@ -21,7 +21,6 @@ class _MaintainWeightScreenState extends State<MaintainWeightScreen> {
 
   Future<void> fetchUserData() async {
     User? user = FirebaseAuth.instance.currentUser;
-
     if (user != null) {
       var userDocument = await FirebaseFirestore.instance
           .collection('users')
@@ -31,7 +30,8 @@ class _MaintainWeightScreenState extends State<MaintainWeightScreen> {
       if (userDocument.exists) {
         setState(() {
           currentWeight = (userDocument['weight'] as num?)?.toDouble() ?? 0.0;
-          goalType = userDocument['goalType'] ?? "รักษาน้ำหนัก";
+          // หากไม่มีข้อมูล goalType ให้ใช้ "Select Occupation" เป็นค่าเริ่มต้น
+          goalType = userDocument['goalType'] ?? "Select Occupation";
         });
       }
     }
@@ -39,6 +39,8 @@ class _MaintainWeightScreenState extends State<MaintainWeightScreen> {
 
   Future<void> saveGoalType() async {
     User? user = FirebaseAuth.instance.currentUser;
+    // ตรวจสอบว่าหาก goalType ตอนนี้เป็น "เพิ่มน้ำหนัก" หรือ "ลดน้ำหนัก"
+    // ไม่ให้บันทึกเป้าหมาย "รักษาน้ำหนัก" จนกว่าจะยกเลิกเป้าหมายอื่นๆ
     if (goalType == 'เพิ่มน้ำหนัก' || goalType == 'ลดน้ำหนัก') {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("กรุณายกเลิกเป้าหมายอื่นๆก่อน")),
@@ -46,33 +48,24 @@ class _MaintainWeightScreenState extends State<MaintainWeightScreen> {
       return;
     }
     if (user != null) {
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .update({
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
         'goalType': "รักษาน้ำหนัก",
       });
-
       ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('บันทึกเป้าหมายรักษาน้ำหนักเรียบร้อย')));
+      fetchUserData(); // โหลดข้อมูลใหม่หลังจากบันทึก
     }
   }
 
   Future<void> cancelGoal() async {
     User? user = FirebaseAuth.instance.currentUser;
-
     if (user != null) {
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .update({
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
         'goalType': null, // ล้าง goalType
       });
-
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("ยกเลิกเป้าหมายเรียบร้อย")),
       );
-
       setState(() {
         goalType = 'Select Occupation'; // รีเซ็ต goalType
       });
@@ -85,8 +78,7 @@ class _MaintainWeightScreenState extends State<MaintainWeightScreen> {
       backgroundColor: backgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
-        title:
-            const Text('รักษาน้ำหนัก', style: TextStyle(color: Colors.black)),
+        title: const Text('รักษาน้ำหนัก', style: TextStyle(color: Colors.black)),
         elevation: 0,
         centerTitle: true,
         titleTextStyle: const TextStyle(
@@ -96,7 +88,7 @@ class _MaintainWeightScreenState extends State<MaintainWeightScreen> {
         ),
       ),
       body: SingleChildScrollView(
-        // ✅ ป้องกัน Overflow
+        // ป้องกัน Overflow
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -117,19 +109,17 @@ class _MaintainWeightScreenState extends State<MaintainWeightScreen> {
                   children: [
                     const Text(
                       "น้ำหนักปัจจุบันของคุณ",
-                      style: TextStyle(
-                        fontSize: 18,
-                      ),
+                      style: TextStyle(fontSize: 18),
                     ),
                     const SizedBox(height: 20),
                     Container(
                       padding: EdgeInsets.all(15),
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(28), //โค้ง
+                        borderRadius: BorderRadius.circular(28),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.1), // เงา
+                            color: Colors.black.withOpacity(0.1),
                             blurRadius: 8,
                           ),
                         ],
@@ -163,21 +153,22 @@ class _MaintainWeightScreenState extends State<MaintainWeightScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: cancelGoal,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+              // แสดงปุ่ม "ยกเลิกเป้าหมาย" เฉพาะเมื่อ goalType เป็น "รักษาน้ำหนัก"
+              if (goalType == "รักษาน้ำหนัก")
+                ElevatedButton(
+                  onPressed: cancelGoal,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: const Text(
+                    'ยกเลิกเป้าหมาย',
+                    style: TextStyle(color: Colors.red, fontSize: 18),
                   ),
                 ),
-                child: const Text(
-                  'ยกเลิกเป้าหมาย',
-                  style: TextStyle(color: Colors.red, fontSize: 18),
-                ),
-              )
             ],
           ),
         ),
