@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart'; 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
@@ -105,9 +105,16 @@ class _FoodDiaryScreenState extends State<FoodDiaryScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFFFF7E8),
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: const Text('Food Diary'),
+  backgroundColor: Colors.transparent,
+  elevation: 0,
+  leading: IconButton(
+    icon: const Icon(Icons.arrow_back, color: Colors.black),
+    onPressed: () {
+      Navigator.pop(context, true); // ✅ ทำงานแบบเดียวกับปุ่มล่าง
+    },
+  ),
+  title: const Text('Food Diary'),
+
         titleTextStyle: const TextStyle(
           fontFamily: 'Jua',
           fontSize: 24,
@@ -195,7 +202,7 @@ class _FoodDiaryScreenState extends State<FoodDiaryScreen> {
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: Text(
-                                      '${currentMeal['food'] ?? "ไม่ระบุ"} : ${currentMeal['calories'] ?? "0 kcal"}',
+                                      '${currentMeal['food'] ?? "ไม่ระบุ"} : ${currentMeal['calories'] ?? "0"} cal',
                                       style: const TextStyle(fontSize: 16, color: Colors.white),
                                     ),
                                   ),
@@ -272,7 +279,7 @@ class _FoodDiaryScreenState extends State<FoodDiaryScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          Navigator.pop(context);
+          Navigator.pop(context, true);
         },
         backgroundColor: Colors.red,
         child: const Icon(Icons.arrow_back),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:percent_indicator/percent_indicator.dart';
+import 'package:intl/intl.dart';
 import 'package:project_app/component/constant.dart';
 import 'package:project_app/screen/bottom_navbar.dart';
 import 'package:project_app/screen/goal_screen.dart';
@@ -17,7 +18,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   double tdee = 0;
-  double consumedCalories = 680;
+  double consumedCalories = 0;
 
   @override
   void initState() {
@@ -40,14 +41,12 @@ class _HomeScreenState extends State<HomeScreen> {
         int age = userDocument['age'];
         String disease = userDocument['disease'];
         String activity = userDocument['activity'];
-
-        // ตรวจสอบว่า goalType มีอยู่หรือไม่
         String? goalType = userDocument.data()?.containsKey('goalType') == true
             ? userDocument['goalType']
             : null;
 
         double calculatedTDEE = calculateAndSaveTDEE(
-          gender, weight, height, age, disease, activity, goalType
+          gender, weight, height, age, disease, activity, goalType,
         );
 
         setState(() {
@@ -55,6 +54,39 @@ class _HomeScreenState extends State<HomeScreen> {
         });
 
         await saveTDEEToFirestore(calculatedTDEE);
+        await fetchConsumedCalories();
+      }
+    }
+  }
+
+  Future<void> fetchConsumedCalories() async {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      String today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+
+      DocumentSnapshot diarySnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('food_diary')
+          .doc(today)
+          .get();
+
+      if (diarySnapshot.exists) {
+        final data = diarySnapshot.data() as Map<String, dynamic>;
+        final entries = List<Map<String, dynamic>>.from(data['entries'] ?? []);
+        double totalCalories = 0;
+
+        for (var entry in entries) {
+          totalCalories += (entry['calories'] ?? 0).toDouble();
+        }
+
+        setState(() {
+          consumedCalories = totalCalories;
+        });
+      } else {
+        setState(() {
+          consumedCalories = 0;
+        });
       }
     }
   }
@@ -147,7 +179,7 @@ class _HomeScreenState extends State<HomeScreen> {
               percentConsumed: percentConsumed,
             ),
             const SizedBox(height: 30),
-            GoalAndDiaryRow(),
+            GoalAndDiaryRow(onDiaryBack: fetchConsumedCalories),
             const SizedBox(height: 20),
             MenuPlanningCard(),
             const SizedBox(height: 30),
@@ -159,118 +191,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-
-class CalorieCard extends StatelessWidget {
-  final double tdee;
-  final double consumedCalories;
-  final double remainingCalories;
-  final double percentConsumed;
-
-  const CalorieCard({
-    Key? key,
-    required this.tdee,
-    required this.consumedCalories,
-    required this.remainingCalories,
-    required this.percentConsumed,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: backgroundHead,
-        borderRadius: BorderRadius.circular(25),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.8),
-            blurRadius: 10.0,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          CircularPercentIndicator(
-            radius: 50.0,
-            lineWidth: 10.0,
-            percent: percentConsumed,
-            center: const Icon(
-              Icons.fastfood_sharp,
-              size: 40.0,
-              color: Colors.white,
-            ),
-            progressColor: backgroundYellow,
-            backgroundColor: backgroundHead2,
-            circularStrokeCap: CircularStrokeCap.round,
-            footer: Padding(
-              padding: const EdgeInsets.only(top: 16.0),
-              child: Text(
-                '${tdee.toStringAsFixed(3)} cal', // แสดงค่า TDEE ด้วยทศนิยม 3 ตำแหน่ง
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 30),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'ปริมาณแคลอรี่ในวันนี้',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 15),
-              Row(
-                children: [
-                  const Icon(
-                    Icons.circle,
-                    color: backgroundYellow,
-                  ),
-                  const SizedBox(width: 5),
-                  Text(
-                    'ทานไปแล้ว ${consumedCalories.toStringAsFixed(3)} cal', // ทศนิยม 3 ตำแหน่ง
-                    style: const TextStyle(color: Colors.white, fontSize: 16),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                    vertical: 8.0, horizontal: 16.0),
-                decoration: BoxDecoration(
-                  color: backgroundPink,
-                  borderRadius: BorderRadius.circular(23),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.3),
-                      blurRadius: 10.0,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
-                ),
-                child: Text(
-                  'เหลือ ${remainingCalories.toStringAsFixed(3)} cal', // ทศนิยม 3 ตำแหน่ง
-                  style: const TextStyle(color: Colors.white, fontSize: 14),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class GoalAndDiaryRow extends StatelessWidget {
+  final VoidCallback onDiaryBack;
+
+  const GoalAndDiaryRow({super.key, required this.onDiaryBack});
+
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -278,7 +203,7 @@ class GoalAndDiaryRow extends StatelessWidget {
       children: [
         Expanded(child: GoalCard()),
         const SizedBox(width: 16),
-        Expanded(child: FoodDiaryCard()),
+        Expanded(child: FoodDiaryCard(onBack: onDiaryBack)),
       ],
     );
   }
@@ -291,7 +216,7 @@ class GoalCard extends StatelessWidget {
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => GoalScreen()), 
+          MaterialPageRoute(builder: (context) => GoalScreen()),
         );
       },
       child: Container(
@@ -323,14 +248,21 @@ class GoalCard extends StatelessWidget {
 }
 
 class FoodDiaryCard extends StatelessWidget {
+  final VoidCallback onBack;
+
+  const FoodDiaryCard({super.key, required this.onBack});
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
+      onTap: () async {
+        final result = await Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => FoodDiaryScreen()), // สร้าง Route ไปยังหน้าจอ FoodDiaryScreen
+          MaterialPageRoute(builder: (context) => FoodDiaryScreen()),
         );
+        if (result == true) {
+          onBack();
+        }
       },
       child: Container(
         padding: const EdgeInsets.all(16),
@@ -367,7 +299,7 @@ class MenuPlanningCard extends StatelessWidget {
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => PlanMenuScreen()), // สร้าง Route ไปยังหน้าจอ PlanMenuScreen
+          MaterialPageRoute(builder: (context) => PlanMenuScreen()),
         );
       },
       child: Container(
@@ -430,6 +362,112 @@ class MenuPlanningCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class CalorieCard extends StatelessWidget {
+  final double tdee;
+  final double consumedCalories;
+  final double remainingCalories;
+  final double percentConsumed;
+
+  const CalorieCard({
+    super.key,
+    required this.tdee,
+    required this.consumedCalories,
+    required this.remainingCalories,
+    required this.percentConsumed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: backgroundHead,
+        borderRadius: BorderRadius.circular(25),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.8),
+            blurRadius: 10.0,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircularPercentIndicator(
+            radius: 50.0,
+            lineWidth: 10.0,
+            percent: percentConsumed.clamp(0.0, 1.0),
+            center: const Icon(
+              Icons.fastfood_sharp,
+              size: 40.0,
+              color: Colors.white,
+            ),
+            progressColor: backgroundYellow,
+            backgroundColor: backgroundHead2,
+            circularStrokeCap: CircularStrokeCap.round,
+            footer: Padding(
+              padding: const EdgeInsets.only(top: 16.0),
+              child: Text(
+                '${tdee.toStringAsFixed(3)} cal',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 30),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'ปริมาณแคลอรี่ในวันนี้',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 15),
+              Row(
+                children: [
+                  const Icon(Icons.circle, color: backgroundYellow),
+                  const SizedBox(width: 5),
+                  Text(
+                    'ทานไปแล้ว ${consumedCalories.toStringAsFixed(3)} cal',
+                    style: const TextStyle(color: Colors.white, fontSize: 16),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                decoration: BoxDecoration(
+                  color: backgroundPink,
+                  borderRadius: BorderRadius.circular(23),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.3),
+                      blurRadius: 10.0,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+                ),
+                child: Text(
+                  'เหลือ ${remainingCalories.toStringAsFixed(3)} cal',
+                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

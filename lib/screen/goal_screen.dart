@@ -42,17 +42,27 @@ class _GoalScreenState extends State<GoalScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFFDF1E6),
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: const Text('Goal'),
-        centerTitle: true,
-        titleTextStyle: const TextStyle(
-          fontFamily: 'Jua',
-          fontSize: 30,
-          fontWeight: FontWeight.w500,
-          color: Color(0xFF2A505A),
-        ),
-      ),
+  backgroundColor: Colors.transparent,
+  elevation: 0,
+  leading: IconButton(
+    icon: const Icon(Icons.arrow_back, color: Colors.black),
+    onPressed: () {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => HomeScreen()),
+      );
+    },
+  ),
+  title: const Text('Goal'),
+  centerTitle: true,
+  titleTextStyle: const TextStyle(
+    fontFamily: 'Jua',
+    fontSize: 30,
+    fontWeight: FontWeight.w500,
+    color: Color(0xFF2A505A),
+  ),
+),
+
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
