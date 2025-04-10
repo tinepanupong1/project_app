@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:project_app/component/constant.dart';
 
 class Waterscreen extends StatefulWidget {
   @override
@@ -60,8 +59,13 @@ class _WaterScreenState extends State<Waterscreen> {
 
   void _updateWaterIntake(double amount) {
     setState(() {
+      // ถ้า currentWaterIntake เป็น 0 และมีการลบ (amount < 0) จะไม่ให้ทำการลด
+      if (currentWaterIntake == 0 && amount < 0) {
+        return; // ไม่ทำอะไรเลยถ้าปริมาณน้ำเป็น 0 แล้วพยายามลบ
+      }
+
       double newIntake = currentWaterIntake + amount;
-      currentWaterIntake = newIntake.clamp(0, goalWaterIntake); // จำกัดค่าไม่ให้เกินเป้าหมาย
+      currentWaterIntake = newIntake.clamp(0, goalWaterIntake); // จำกัดไม่ให้เกินเป้าหมาย
       String timeEntry = "${DateTime.now().hour}:${DateTime.now().minute} - ${amount.toInt()} ml";
       waterHistory.insert(0, timeEntry);
     });

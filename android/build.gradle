@@ -1,18 +1,25 @@
+// การตั้งค่า repository สำหรับทั้งโปรเจ็กต์ 
 allprojects {
     repositories {
-        google()
-        mavenCentral()
+        google()          // ใช้ Google Maven repository สำหรับการดึงไลบรารี
+        mavenCentral()    // ใช้ Maven Central repository สำหรับการดึงไลบรารี
     }
 }
 
-rootProject.buildDir = '../build'
+// การกำหนด buildDir สำหรับ rootProject และ subprojects
+rootProject.buildDir = '../build'  // กำหนดเส้นทางของไฟล์ build ที่ระดับ root project
+
+// การตั้งค่าการสร้างไฟล์ build สำหรับ subprojects
 subprojects {
-    project.buildDir = "${rootProject.buildDir}/${project.name}"
-}
-subprojects {
-    project.evaluationDependsOn(':app')
+    project.buildDir = "${rootProject.buildDir}/${project.name}"  // กำหนดเส้นทางของไฟล์ build สำหรับแต่ละ subproject
 }
 
+// การตั้งค่าการอ้างอิง dependencies ระหว่าง subprojects
+subprojects {
+    project.evaluationDependsOn(':app')  // ระบุให้ทุก subproject ขึ้นอยู่กับโปรเจ็กต์ 'app'
+}
+
+// การกำหนด task สำหรับการทำความสะอาด (clean)
 tasks.register("clean", Delete) {
-    delete rootProject.buildDir
+    delete rootProject.buildDir  // ลบไดเร็กทอรี build ของ root project
 }
