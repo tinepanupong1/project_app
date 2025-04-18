@@ -53,6 +53,8 @@ dependencies:
   path_provider: ^2.0.11 # เพิ่ม package สำหรับการจัดการไฟล์
   intl: ^0.17.0 
   fl_chart: ^0.40.0
+  firebase_storage: ^11.7.7
+  
 
 dev_dependencies:
   flutter_test:
