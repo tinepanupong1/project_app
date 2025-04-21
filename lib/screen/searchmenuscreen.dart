@@ -418,8 +418,10 @@ class _SearchMenuScreenState extends State<SearchMenuScreen> {
                                   : int.tryParse(
                                           foodData['calories'].toString()) ??
                                       0,
-                              imageUrl: foodData['img'] ??
-                                  '', // ✅ ส่งค่า imageUrl จาก Firebase
+                              imageUrl: foodData['img'] ?? '',
+                              ingredients: List<String>.from(
+                                  foodData['ingredients'] ??
+                                      []), // ✅ ส่งค่าเข้า
                             ),
                           ),
                         );
@@ -525,7 +527,8 @@ class _SearchMenuScreenState extends State<SearchMenuScreen> {
                                           snackData['calories'].toString()) ??
                                       0,
                               imageUrl: snackData['img'] ??
-                                  '', // ✅ ส่งค่า imageUrl จาก Firebase
+                                  '', ingredients: List<String>.from(snackData['ingredients'] ?? []),
+
                             ),
                           ),
                         );
@@ -635,7 +638,8 @@ class _SearchMenuScreenState extends State<SearchMenuScreen> {
                                           riceData['calories'].toString()) ??
                                       0,
                               imageUrl: riceData['img'] ??
-                                  '', // ✅ ส่งค่า imageUrl จาก Firebase
+                                  '', ingredients: List<String>.from(riceData['ingredients'] ?? []),
+
                             ),
                           ),
                         );

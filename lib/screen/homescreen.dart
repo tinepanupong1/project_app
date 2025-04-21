@@ -8,6 +8,8 @@ import 'package:project_app/screen/bottom_navbar.dart';
 import 'package:project_app/screen/goal_screen.dart';
 import 'package:project_app/screen/planmenuscreen.dart';
 import 'fooddiaryscreen.dart';
+import 'package:project_app/screen/notification.dart';
+
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -161,10 +163,17 @@ class _HomeScreenState extends State<HomeScreen> {
           color: textColorTitle,
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications, color: backgroundPink),
-            onPressed: () {},
-          ),
+         // ส่วนของปุ่มกระดิ่งใน AppBar
+IconButton(
+  icon: Icon(Icons.notifications, color: Colors.redAccent),
+  onPressed: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => NotificationScreen()),
+    );
+  },
+)
+
         ],
       ),
       body: SingleChildScrollView(

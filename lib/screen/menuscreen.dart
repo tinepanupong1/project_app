@@ -9,8 +9,14 @@ class MenuScreen extends StatefulWidget {
   final String foodName;
   final num calories;
   final String imageUrl;
+  final List<String> ingredients;
 
-  MenuScreen({required this.foodName, required this.calories, required this.imageUrl});
+  MenuScreen({
+    required this.foodName,
+    required this.calories,
+    required this.imageUrl,
+    required this.ingredients,
+  });
 
   @override
   _MenuScreenState createState() => _MenuScreenState();
@@ -44,7 +50,7 @@ class _MenuScreenState extends State<MenuScreen> {
               Container(
                 padding: const EdgeInsets.all(15),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.8), // เปลี่ยนเป็นโปร่งใสสีขาวแบบภาพที่ 1
+                  color: Colors.white.withOpacity(0.8),
                   borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
                 ),
                 child: Center(
@@ -160,75 +166,109 @@ class _MenuScreenState extends State<MenuScreen> {
     );
   }
 
+  void _saveToFoodDiary(DateTime date, String meal) async {
+    FirebaseFirestore firestore = FirebaseFirestore.instance;
+    FirebaseAuth auth = FirebaseAuth.instance;
 
-void _saveToFoodDiary(DateTime date, String meal) async {
-  FirebaseFirestore firestore = FirebaseFirestore.instance;
-  FirebaseAuth auth = FirebaseAuth.instance;
-
-  User? user = auth.currentUser;
-  if (user == null) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text("กรุณาเข้าสู่ระบบก่อนบันทึกข้อมูล"),
-        duration: Duration(seconds: 2),
-      ),
-    );
-    return;
-  }
-  String userId = user.uid;
-
-  // แปลงวันที่เป็น "yyyy-MM-dd"
-  String formattedDate = "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
-
-  // ข้อมูลที่จะบันทึก (❌ **ลบ timestamp ออกจาก arrayUnion()**)
-  Map<String, dynamic> newEntry = {
-    'meal': meal,
-    'food': widget.foodName,
-    'calories': widget.calories * plateCount,
-    'image': widget.imageUrl,
-  };
-
-  try {
-    DocumentReference diaryRef = firestore.collection("users").doc(userId).collection("food_diary").doc(formattedDate);
-
-    // ตรวจสอบว่ามีเอกสารอยู่หรือไม่
-    DocumentSnapshot doc = await diaryRef.get();
-
-    if (doc.exists) {
-      // 🔹 ถ้ามีเอกสารแล้ว ใช้ update()
-      await diaryRef.update({
-        "entries": FieldValue.arrayUnion([newEntry])
-      });
-    } else {
-      // 🔹 ถ้ายังไม่มี ใช้ set() และเพิ่ม timestamp ข้างนอก arrayUnion()
-      await diaryRef.set({
-        "entries": [newEntry],
-        "timestamp": FieldValue.serverTimestamp(), // ✅ ใช้ timestamp ได้ที่นี่
-      });
-    }
-
-    // แจ้งเตือนว่าบันทึกสำเร็จ
-    if (mounted) {
+    User? user = auth.currentUser;
+    if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('บันทึก ${widget.foodName} ใน $meal วันที่ $formattedDate แล้ว'),
-          duration: Duration(seconds: 2),
-        ),
+        SnackBar(content: Text("กรุณาเข้าสู่ระบบก่อนบันทึกข้อมูล")),
       );
-
-      Navigator.pop(context); // ปิด Dialog
+      return;
     }
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('เกิดข้อผิดพลาดในการบันทึกข้อมูล: $e'),
-        duration: Duration(seconds: 2),
-      ),
-    );
+
+    String userId = user.uid;
+    String formattedDate = "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+
+    List<String> ingredients = widget.ingredients;
+
+    if (ingredients.isEmpty) {
+      try {
+        final snapshot = await firestore
+            .collectionGroup('meals')
+            .where('food_name', isEqualTo: widget.foodName)
+            .get();
+
+        if (snapshot.docs.isNotEmpty) {
+          ingredients = List<String>.from(snapshot.docs.first.data()['ingredients'] ?? []);
+        }
+      } catch (e) {
+        print("ไม่พบ ingredients ใน meals: $e");
+      }
+
+      if (ingredients.isEmpty) {
+        try {
+          final snapshot = await firestore
+              .collectionGroup('snacks')
+              .where('food_name', isEqualTo: widget.foodName)
+              .get();
+
+          if (snapshot.docs.isNotEmpty) {
+            ingredients = List<String>.from(snapshot.docs.first.data()['ingredients'] ?? []);
+          }
+        } catch (e) {
+          print("ไม่พบ ingredients ใน snacks: $e");
+        }
+      }
+
+      if (ingredients.isEmpty) {
+        try {
+          final snapshot = await firestore
+              .collectionGroup('rice')
+              .where('food_name', isEqualTo: widget.foodName)
+              .get();
+
+          if (snapshot.docs.isNotEmpty) {
+            ingredients = List<String>.from(snapshot.docs.first.data()['ingredients'] ?? []);
+          }
+        } catch (e) {
+          print("ไม่พบ ingredients ใน rice: $e");
+        }
+      }
+    }
+
+    Map<String, dynamic> newEntry = {
+      'meal': meal,
+      'food': widget.foodName,
+      'calories': widget.calories * plateCount,
+      'image': widget.imageUrl,
+      'ingredients': ingredients,
+    };
+
+    try {
+      DocumentReference diaryRef = firestore
+          .collection("users")
+          .doc(userId)
+          .collection("food_diary")
+          .doc(formattedDate);
+
+      DocumentSnapshot doc = await diaryRef.get();
+
+      if (doc.exists) {
+        await diaryRef.update({
+          "entries": FieldValue.arrayUnion([newEntry])
+        });
+      } else {
+        await diaryRef.set({
+          "entries": [newEntry],
+          "timestamp": FieldValue.serverTimestamp(),
+        });
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('บันทึก ${widget.foodName} เรียบร้อยแล้ว'),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('เกิดข้อผิดพลาด: $e')),
+      );
+    }
   }
-}
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -263,7 +303,6 @@ void _saveToFoodDiary(DateTime date, String meal) async {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // ✅ ปรับให้โหลดรูปแค่ครั้งเดียว
             Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(15),

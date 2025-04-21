@@ -55,7 +55,10 @@ class _SelectInfoScreenState extends State<SelectInfoScreen> {
                     final String height = heightController.text;
                     final String age = ageController.text;
                     final String disease = _selectedDisease;
-                    final String allergies = allergyController.text;
+                    final String allergiesText = allergyController.text;
+
+                    // Convert allergiesText to a List<String>
+                    List<String> allergies = allergiesText.split(',').map((e) => e.trim()).toList();
 
                     // ตรวจสอบว่าทุกช่องกรอกข้อมูลครบถ้วน
                     if (gender == 'Select Gender' || 
@@ -208,13 +211,13 @@ class _SelectInfoScreenState extends State<SelectInfoScreen> {
             border: InputBorder.none,
             labelText: labelText,
           ),
-          keyboardType: TextInputType.number,
+          keyboardType: TextInputType.text,
         ),
       ),
     );
   }
 
-  Future<void> saveUserData(String gender, String age, String weight, String height, String disease, String allergies) async {
+  Future<void> saveUserData(String gender, String age, String weight, String height, String disease, List<String> allergies) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
 
     // Save to SharedPreferences
@@ -223,7 +226,7 @@ class _SelectInfoScreenState extends State<SelectInfoScreen> {
     await prefs.setString('weight', weight);
     await prefs.setString('height', height);
     await prefs.setString('disease', disease);
-    await prefs.setString('allergies', allergies);
+    await prefs.setStringList('allergies', allergies);
 
     // Save to Firestore
     User? user = FirebaseAuth.instance.currentUser;
