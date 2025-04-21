@@ -277,13 +277,13 @@ class _FoodDiaryScreenState extends State<FoodDiaryScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.pop(context, true);
-        },
-        backgroundColor: Colors.red,
-        child: const Icon(Icons.arrow_back),
-      ),
+   //   floatingActionButton: FloatingActionButton(
+     //   onPressed: () {
+     //     Navigator.pop(context, true);
+     //   },
+     //   backgroundColor: Colors.red,
+    //    child: const Icon(Icons.arrow_back),
+   //   ),
     );
   }
 }
@@ -301,37 +301,41 @@ class CustomCalendarWidget extends StatelessWidget {
 
   final DateFormat formatter = DateFormat('MMM y');
 
-  List<TableRow> buildCalendar() {
-    final firstDayOfMonth = DateTime(now.year, now.month, 1);
-    final lastDayOfMonth = DateTime(now.year, now.month + 1, 0);
-    final daysInMonth = lastDayOfMonth.day;
+ List<TableRow> buildCalendar() {
+  final firstDayOfMonth = DateTime(now.year, now.month, 1);
+  final lastDayOfMonth = DateTime(now.year, now.month + 1, 0);
+  final daysInMonth = lastDayOfMonth.day;
 
-    int dayOfWeek = firstDayOfMonth.weekday;
-    List<TableRow> rows = [];
+  // ให้วันอาทิตย์ = 0, จันทร์ = 1, ..., เสาร์ = 6
+  int dayOfWeek = (firstDayOfMonth.weekday % 7);
+  List<TableRow> rows = [];
 
-    List<Widget> firstRow = List.generate(7, (index) {
-      if (index < dayOfWeek - 1) {
-        return const SizedBox();
+  // แถวแรก
+  List<Widget> firstRow = List.generate(7, (index) {
+    if (index < dayOfWeek) {
+      return const SizedBox();
+    } else {
+      return buildDayCell(index - dayOfWeek + 1);
+    }
+  });
+  rows.add(TableRow(children: firstRow));
+
+  // แถวต่อ ๆ ไป
+  int day = 8 - dayOfWeek;
+  while (day <= daysInMonth) {
+    List<Widget> weekRow = List.generate(7, (index) {
+      if (day <= daysInMonth) {
+        return buildDayCell(day++);
       } else {
-        return buildDayCell(index - dayOfWeek + 2);
+        return const SizedBox();
       }
     });
-    rows.add(TableRow(children: firstRow));
-
-    int day = 8 - dayOfWeek;
-    while (day <= daysInMonth) {
-      List<Widget> weekRow = List.generate(7, (index) {
-        if (day <= daysInMonth) {
-          return buildDayCell(day++);
-        } else {
-          return const SizedBox();
-        }
-      });
-      rows.add(TableRow(children: weekRow));
-    }
-
-    return rows;
+    rows.add(TableRow(children: weekRow));
   }
+
+  return rows;
+}
+
 
   Widget buildDayCell(int day) {
     final DateTime today = DateTime.now();

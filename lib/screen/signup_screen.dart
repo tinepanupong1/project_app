@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:project_app/component/my_button.dart';
-import 'package:project_app/screen/selectinfo.dart'; 
+import 'package:project_app/screen/selectinfo.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // Import Firestore
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -14,36 +14,34 @@ class SignUpScreen extends StatefulWidget {
 class _SignUpScreenState extends State<SignUpScreen> {
   final nameController = TextEditingController();
   final emailController = TextEditingController();
+  final phoneController = TextEditingController(); // เบอร์โทร
   final passwordController = TextEditingController();
   final repasswordController = TextEditingController();
 
   signUpWithEmail() async {
     try {
-      // Create user with email and password
-      UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      UserCredential userCredential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(
         email: emailController.text,
         password: passwordController.text,
       );
 
-      // Get the User UID
       String uid = userCredential.user!.uid;
 
-      // Store additional user information in Firestore
       await FirebaseFirestore.instance.collection('users').doc(uid).set({
         'name': nameController.text,
         'email': emailController.text,
-        'gender': null, // จะได้รับค่าในหน้า SelectInfoScreen
-        'age': null, // จะได้รับค่าในหน้า SelectInfoScreen
-        'weight': null, // จะได้รับค่าในหน้า SelectInfoScreen
-        'height': null, // จะได้รับค่าในหน้า SelectInfoScreen
-        'disease': null, // จะได้รับค่าในหน้า SelectInfoScreen
-        'allergies': null, // จะได้รับค่าในหน้า SelectInfoScreen
+        'phone': phoneController.text, // เพิ่มเบอร์โทร
+        'gender': null,
+        'age': null,
+        'weight': null,
+        'height': null,
+        'disease': null,
+        'allergies': null,
       });
 
-      // Notify the user
       _showMyDialog('สมัครสมาชิกสำเร็จ!');
 
-      // Navigate to the next screen
       Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => SelectInfoScreen()),
@@ -133,9 +131,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     ),
                     SizedBox(width: 10),
                     CircleAvatar(
-                      radius: 100, // ปรับขนาดรูปภาพให้ใหญ่ขึ้น
+                      radius: 100,
                       backgroundImage: AssetImage('assets/images/food2.png'),
-                      backgroundColor: Colors.transparent, // ตั้งค่า backgroundColor ให้เป็นโปร่งใส
+                      backgroundColor: Colors.transparent,
                     ),
                   ],
                 ),
@@ -143,9 +141,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
               const SizedBox(height: 20),
               Center(
                 child: Container(
-                  width: 300, // ปรับขนาดความกว้างให้แคบลง
-                  height: 340, // ปรับขนาดความสูงตามต้องการ
-                  padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 16.0), // เพิ่ม padding ให้ด้านบนและด้านล่าง
+                  width: 300,
+                  height: 410, // เพิ่มความสูงรองรับช่องเบอร์โทร
+                  padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 16.0),
                   decoration: BoxDecoration(
                     color: const Color.fromRGBO(255, 197, 66, 1),
                     borderRadius: BorderRadius.circular(16),
@@ -159,7 +157,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   ),
                   child: Column(
                     children: [
-                      const SizedBox(height: 25), // เพิ่มพื้นที่ว่างด้านบน
+                      const SizedBox(height: 25),
                       MyTextField(
                         controller: nameController,
                         hintText: 'Name',
@@ -185,7 +183,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         hintText: 'Confirm password',
                         labelText: 'Repeat your password',
                       ),
-                      const SizedBox(height: 20), // เพิ่มพื้นที่ว่างด้านล่าง
+                      const SizedBox(height: 20),
+                      MyTextField(
+                        controller: phoneController,
+                        hintText: 'Phone Number',
+                        labelText: 'Phone Number',
+                        obscureText: false,
+                      ),
                     ],
                   ),
                 ),
@@ -197,7 +201,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.redAccent,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8.0), // ปรับให้เป็นสี่เหลี่ยม
+                      borderRadius: BorderRadius.circular(8.0),
                     ),
                     side: const BorderSide(color: Colors.white, width: 4.0),
                     padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 20),
@@ -234,7 +238,7 @@ class MyTextField extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Container(
-        width: 270, // ปรับขนาดความกว้างให้สั้นลง
+        width: 270,
         child: TextField(
           controller: controller,
           obscureText: obscureText,
@@ -284,7 +288,7 @@ class _PasswordTextFieldState extends State<PasswordTextField> {
   Widget build(BuildContext context) {
     return Center(
       child: Container(
-        width: 270, // ปรับขนาดความกว้างให้สั้นลง
+        width: 270,
         child: TextField(
           controller: widget.controller,
           obscureText: _obscureText,

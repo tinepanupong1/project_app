@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:project_app/screen/signup_screen.dart';
 import 'package:project_app/screen/homescreen.dart';
+import 'package:project_app/screen/forgotpassword.dart'; // ✅ เพิ่ม import
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -11,12 +12,11 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  // Text Editing Controllers
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   bool _obscureText = true;
 
-  // Sign In with Email method
+  // ฟังก์ชันเข้าสู่ระบบ
   signInWithEmail() async {
     try {
       await FirebaseAuth.instance.signInWithEmailAndPassword(
@@ -27,15 +27,31 @@ class _LoginScreenState extends State<LoginScreen> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => HomeScreen(),
+          builder: (context) => const HomeScreen(),
         ),
       );
     } on FirebaseAuthException catch (e) {
-      print('Failed with error code: ${e.code}');
-      print(e.message);
+      print('Login error: ${e.code}');
+      _showErrorDialog(e.message ?? 'Login failed');
     }
   }
-  
+
+  void _showErrorDialog(String msg) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Error"),
+        content: Text(msg),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("OK"),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -77,12 +93,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-              const Center(
-                child: CircleAvatar(
-                  radius: 120,
-                  backgroundImage: AssetImage('assets/images/food1.png'),
-                  backgroundColor: Colors.transparent,
-                ),
+              const CircleAvatar(
+                radius: 120,
+                backgroundImage: AssetImage('assets/images/food1.png'),
+                backgroundColor: Colors.transparent,
               ),
               const SizedBox(height: 20),
               const Text(
@@ -106,8 +120,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       borderRadius: BorderRadius.circular(30.0),
                       borderSide: BorderSide.none,
                     ),
-                    contentPadding: const EdgeInsets.symmetric(
-                        vertical: 10, horizontal: 30),
+                    contentPadding:
+                        const EdgeInsets.symmetric(vertical: 10, horizontal: 30),
                   ),
                 ),
               ),
@@ -125,8 +139,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       borderRadius: BorderRadius.circular(30.0),
                       borderSide: BorderSide.none,
                     ),
-                    contentPadding: const EdgeInsets.symmetric(
-                        vertical: 10, horizontal: 30),
+                    contentPadding:
+                        const EdgeInsets.symmetric(vertical: 10, horizontal: 30),
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscureText ? Icons.visibility_off : Icons.visibility,
@@ -163,21 +177,30 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               const SizedBox(height: 20),
+
+              // 🔹 ลิงก์ไปหน้าลืมรหัสผ่าน
               TextButton(
                 onPressed: () {
-                  // Forgot password action
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ForgotPasswordScreen(),
+                    ),
+                  );
                 },
                 child: Text(
                   'Forgot password?',
                   style: TextStyle(color: Colors.grey[600]),
                 ),
               ),
+
+              // 🔹 ลิงก์ไปหน้า Register
               TextButton(
                 onPressed: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => SignUpScreen(),
+                      builder: (context) => const SignUpScreen(),
                     ),
                   );
                 },
