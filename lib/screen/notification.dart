@@ -17,55 +17,74 @@ class _NotificationScreenState extends State<NotificationScreen> {
     _fetchNotifications();
   }
 
-  // ฟังก์ชันดึงข้อมูลการแจ้งเตือน
   Future<void> _fetchNotifications() async {
-    // ดึงข้อมูลผู้ใช้ที่ล็อกอิน
     User? user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    // ดึงข้อมูลอาการแพ้จาก Firestore
+    // 🔹 ดึงข้อมูลอาการแพ้
     DocumentSnapshot userDoc = await FirebaseFirestore.instance
         .collection('users')
         .doc(user.uid)
         .get();
 
-    List<dynamic> allergies = userDoc['allergies'] ?? [];
-    print("User Allergies: $allergies");
+    List<dynamic> allergies = [];
+    var rawAllergies = userDoc['allergies'];
+    if (rawAllergies is List) {
+      allergies = rawAllergies;
+    } else if (rawAllergies is String) {
+      allergies = [rawAllergies];
+    }
 
-    // ดึงข้อมูลบันทึกอาหารจาก Firestore
-    QuerySnapshot foodDiarySnapshot = await FirebaseFirestore.instance
+    print("🐔 User Allergies: $allergies");
+
+    // 🔹 ดึงข้อมูลเมนูของวันนี้
+    final dateKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    DocumentSnapshot foodDoc = await FirebaseFirestore.instance
         .collection('users')
         .doc(user.uid)
         .collection('food_diary')
+        .doc(dateKey)
         .get();
 
-    for (var doc in foodDiarySnapshot.docs) {
-      List<dynamic> entries = doc['entries'] ?? [];
-      
-      // ลูปผ่านทุกเมนูอาหาร
-      for (var entry in entries) {
-        List<dynamic> ingredients = entry['ingredients'] ?? [];
-        print("Ingredients for ${entry['food']}: $ingredients");
+    if (!foodDoc.exists) {
+      print("📭 ไม่มีข้อมูล food_diary สำหรับวันที่ $dateKey");
+      return;
+    }
 
-        // เปรียบเทียบว่า ingredients มีอาหารที่แพ้หรือไม่
-        for (var ingredient in ingredients) {
-          // ตรวจสอบว่า `ingredients` ตรงกับ `allergies` โดยตรง
-          for (var allergy in allergies) {
-            if (ingredient.toString().contains(allergy)) {
-              setState(() {
-                // ถ้าพบอาหารที่แพ้, ให้แสดงการแจ้งเตือน
-                notifications.add({
-                  'date': DateFormat('dd MMMM yyyy').format(DateTime.now()),
-                  'text': 'คุณทานอาหารที่แพ้: $allergy',
-                  'time': DateFormat('HH:mm').format(DateTime.now()),
-                  'type': 'alert',
-                });
-              });
-            }
+    var data = foodDoc.data() as Map<String, dynamic>;
+    List<dynamic> entries = data['entries'] ?? [];
+
+    List<Map<String, String>> tempNoti = [];
+
+    for (var entry in entries) {
+      String food = entry['food'] ?? 'ไม่ทราบชื่ออาหาร';
+      List<dynamic> ingredients = entry['ingredients'] ?? [];
+
+      bool foundAllergy = false;
+
+      for (var ingredient in ingredients) {
+        for (var allergy in allergies) {
+          if (ingredient.toString().contains(allergy)) {
+            print("⚠️ พบสารก่อแพ้: $allergy ในเมนู $food");
+
+            tempNoti.add({
+              'date': DateFormat('dd MMMM yyyy').format(DateTime.now()),
+              'text': 'คุณทานเมนู "$food" ที่มีส่วนผสมที่คุณแพ้: $allergy',
+              'time': DateFormat('HH:mm').format(DateTime.now()),
+              'type': 'alert',
+            });
+
+            foundAllergy = true;
+            break; // หยุดตรวจ allergy ใน ingredient นี้
           }
         }
+        if (foundAllergy) break; // หยุดตรวจ ingredient ถ้าเจอแล้ว
       }
     }
+
+    setState(() {
+      notifications.addAll(tempNoti);
+    });
   }
 
   @override
@@ -81,7 +100,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
           icon: const Icon(Icons.arrow_back, color: Colors.pink),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('การแจ้งเตือน'),
+        title: const Text('Notification'),
         centerTitle: true,
         titleTextStyle: const TextStyle(
           fontFamily: 'Jua',
@@ -118,7 +137,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                 margin: EdgeInsets.only(bottom: 12),
                 padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
-                  color: Colors.pink[100], // สำหรับการแจ้งเตือนอาหารที่แพ้
+                  color: Colors.pink[100],
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Row(

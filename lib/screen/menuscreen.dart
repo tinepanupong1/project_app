@@ -382,6 +382,19 @@ class _MenuScreenState extends State<MenuScreen> {
                 ),
               ],
             ),
+            TextButton.icon(
+  onPressed: _showIngredientsAlert,
+  icon: Icon(Icons.info_outline, color: Colors.redAccent),
+  label: Text(
+    "ดูวัตถุดิบ",
+    style: TextStyle(
+      color: Colors.redAccent,
+      fontWeight: FontWeight.bold,
+    ),
+  ),
+),
+
+
             const SizedBox(height: 20),
             Column(
               children: [
@@ -437,4 +450,30 @@ class _MenuScreenState extends State<MenuScreen> {
       ),
     );
   }
+  void _showIngredientsAlert() {
+  showDialog(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: Text('วัตถุดิบของ ${widget.foodName}'),
+        content: widget.ingredients.isEmpty
+            ? Text('ไม่มีข้อมูลวัตถุดิบ')
+            : SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: widget.ingredients.map((item) => Text("• $item")).toList(),
+                ),
+              ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('ปิด'),
+          ),
+        ],
+      );
+    },
+  );
+}
+
 }

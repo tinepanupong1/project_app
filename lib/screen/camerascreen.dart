@@ -23,6 +23,8 @@ class _CameraScreenState extends State<CameraScreen> {
   String foodName = '';
   int calories = 0;
   String imageUrl = '';
+  List<String> extractedIngredients = [];
+
 
   // ฟังก์ชันเลือกภาพจากโทรศัพท์
   Future<void> _pickImage() async {
@@ -77,6 +79,7 @@ class _CameraScreenState extends State<CameraScreen> {
           _isAnalyzing = false;
         });
 
+ extractedIngredients = _extractIngredientsFromText(response.text!);
         try {
           final lines = _responseText.split("\n");
 
@@ -276,6 +279,7 @@ class _CameraScreenState extends State<CameraScreen> {
                               'image': imageUrl,
                               'meal': selectedMeal,
                               'timestamp': DateFormat('yyyy-MM-dd HH:mm:ss').format(selectedDate),
+                              'ingredients': extractedIngredients,
                             });
                             Navigator.pop(context);
                           },
@@ -311,7 +315,7 @@ class _CameraScreenState extends State<CameraScreen> {
           child: Column(
             children: [
               GestureDetector(
-                onTap: _isAnalyzing ? null : _pickImage,
+                onTap: _isAnalyzing ? null : _showChooseAnalysisMethod,
                 child: Container(
                   width: 270,
                   height: 300,
@@ -391,4 +395,198 @@ class _CameraScreenState extends State<CameraScreen> {
       ),
     );
   }
+  void _showChooseAnalysisMethod() {
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: Text("เลือกวิธีวิเคราะห์อาหาร"),
+        content: Text("คุณต้องการวิเคราะห์อาหารโดยวิธีใด?"),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _pickImage(); // อ่านจากภาพ
+            },
+            child: Text("ให้อ่านจากภาพเลย"),
+          ),
+          TextButton(
+  onPressed: () {
+    Navigator.of(context).pop();
+    _showManualInputDialog(); // ใส่วัตถุดิบก่อน แล้วค่อยบังคับอัปโหลดรูป
+  },
+  child: Text("ใส่ปริมาณเอง"),
+)
+
+        ],
+      );
+    },
+  );
+}
+
+void _showManualInputDialog() {
+  List<TextEditingController> ingredientControllers = [TextEditingController()];
+
+  showDialog(
+    context: context,
+    builder: (context) => StatefulBuilder(
+      builder: (context, setStateDialog) => AlertDialog(
+        title: Text("ใส่ส่วนประกอบของอาหาร"),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ...ingredientControllers.map((controller) {
+                int index = ingredientControllers.indexOf(controller);
+                return Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: controller,
+                        decoration: InputDecoration(labelText: "วัตถุดิบ + ปริมาณ (เช่น ข้าว 100g)"),
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.delete),
+                      onPressed: () {
+                        setStateDialog(() {
+                          if (ingredientControllers.length > 1) {
+                            ingredientControllers.removeAt(index);
+                          }
+                        });
+                      },
+                    ),
+                  ],
+                );
+              }),
+              TextButton.icon(
+                icon: Icon(Icons.add),
+                label: Text("เพิ่มวัตถุดิบ"),
+                onPressed: () {
+                  setStateDialog(() {
+                    ingredientControllers.add(TextEditingController());
+                  });
+                },
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text("ยกเลิก"),
+          ),
+          ElevatedButton(
+  onPressed: () async {
+    List<String> ingredients = ingredientControllers
+        .where((c) => c.text.trim().isNotEmpty)
+        .map((c) => c.text.trim())
+        .toList();
+
+    if (ingredients.isNotEmpty) {
+      if (_image == null) {
+        // ถ้ายังไม่มีรูป ให้เลือกรูปก่อน
+        final XFile? pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+        if (pickedFile != null) {
+          setState(() {
+            _image = File(pickedFile.path);
+          });
+        } else {
+          return; // ถ้ายังไม่เลือกรูป ไม่วิเคราะห์
+        }
+      }
+
+      // อ่าน bytes และเตรียมข้อมูลสำหรับ Gemini
+      final bytes = await _image!.readAsBytes();
+      final mimeType = 'image/jpeg';
+      final prompt = '''
+คุณได้รับรูปภาพอาหาร และวัตถุดิบบางรายการที่ผู้ใช้กรอกไว้
+กรุณาวิเคราะห์จากภาพ และผสานข้อมูลที่ผู้ใช้กรอก เพื่อ:
+
+1. ระบุชื่อเมนูอาหารจากภาพนี้
+2. ระบุรายการวัตถุดิบทั้งหมดในจานอาหารนี้ พร้อมปริมาณ (ถ้าผู้ใช้กรอก ให้ใช้ตามนั้น)
+3. วัตถุดิบที่ไม่มีการกรอกปริมาณ ให้ประมาณจากภาพ
+4. คำนวณจำนวนแคลอรี่รวมทั้งหมดของจานอาหารนี้ (ไม่ใช้ช่วง)
+
+**รายการวัตถุดิบที่ผู้ใช้ระบุเอง:**
+${ingredients.map((i) => "- $i").join("\n")}
+
+กรุณาตอบกลับตามรูปแบบนี้:
+
+ชื่อเมนูอาหาร: <ชื่อเมนู>
+ส่วนประกอบ:
+- <วัตถุดิบ>: <ปริมาณ> กรัม
+- ...
+จำนวนแคลอรี่ทั้งหมด: <จำนวน> แคลอรี่
+''';
+
+
+      final GenerativeModel model = GenerativeModel(
+        model: 'gemini-1.5-flash',
+        apiKey: 'AIzaSyB4rI-ch_vqO4dAlwT1X4sLRI2jvaJoByU',
+      );
+
+      final response = await model.generateContent([
+        Content('user', [
+          TextPart(prompt),
+          DataPart(mimeType, bytes),
+        ]),
+      ]);
+
+      // ⬇️ อัปโหลดภาพเพื่อเก็บ URL
+      imageUrl = await _uploadImageToFirebase(_image!);
+
+final titleMatch = RegExp(r'ชื่อเมนูอาหาร\s*:?\s*(.+)').firstMatch(response.text ?? '');
+if (titleMatch != null) {
+  foodName = titleMatch.group(1)!.trim();
+  final cleaned = (response.text ?? '').replaceFirst(titleMatch.group(0)!, '').trim();
+
+  setState(() {
+  _responseText = "ชื่อเมนูอาหาร: $foodName\n$cleaned";
+  calories = int.tryParse(
+    RegExp(r'(\d+)\s*แคลอรี่').firstMatch(response.text ?? '')?.group(1) ?? '',
+  ) ?? 0;
+});
+extractedIngredients = _extractIngredientsFromText(response.text ?? '');
+
+} else {
+  setState(() {
+    _responseText = response.text ?? "ไม่สามารถคำนวณได้";
+  });
+}
+
+
+
+
+      Navigator.of(context).pop();
+    }
+  },
+  child: Text("วิเคราะห์"),
+),
+        ],
+      ),
+    ),
+  );
+}
+List<String> _extractIngredientsFromText(String text) {
+  final List<String> lines = text.split('\n');
+  final List<String> ingredients = [];
+
+  bool foundIngredientSection = false;
+  for (final line in lines) {
+    if (line.contains('ส่วนประกอบ')) {
+      foundIngredientSection = true;
+      continue;
+    }
+    if (foundIngredientSection) {
+      if (line.trim().isEmpty || line.contains('จำนวนแคลอรี่')) break;
+      ingredients.add(line.trim());
+    }
+  }
+
+  return ingredients;
+}
+
 }
