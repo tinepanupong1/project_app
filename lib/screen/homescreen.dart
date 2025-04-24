@@ -6,10 +6,12 @@ import 'package:intl/intl.dart';
 import 'package:project_app/component/constant.dart';
 import 'package:project_app/screen/bottom_navbar.dart';
 import 'package:project_app/screen/goal_screen.dart';
+import 'package:project_app/screen/loginscreen.dart';
+import 'package:project_app/screen/recommendation_screen.dart';
 import 'package:project_app/screen/planmenuscreen.dart';
+import 'package:project_app/screen/waterscreen.dart';
 import 'fooddiaryscreen.dart';
 import 'package:project_app/screen/notification.dart';
-
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -21,10 +23,11 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   double tdee = 0;
   double consumedCalories = 0;
-
+  String? _uid;
   @override
   void initState() {
     super.initState();
+    _uid = FirebaseAuth.instance.currentUser?.uid;
     fetchUserData();
   }
 
@@ -48,7 +51,13 @@ class _HomeScreenState extends State<HomeScreen> {
             : null;
 
         double calculatedTDEE = calculateAndSaveTDEE(
-          gender, weight, height, age, disease, activity, goalType,
+          gender,
+          weight,
+          height,
+          age,
+          disease,
+          activity,
+          goalType,
         );
 
         setState(() {
@@ -93,7 +102,8 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  double calculateBMR(String gender, double weight, double height, int age, String disease) {
+  double calculateBMR(
+      String gender, double weight, double height, int age, String disease) {
     double bmr = 0.0;
     if (disease == 'โรคอ้วน') {
       bmr = (gender == 'ชาย')
@@ -111,16 +121,23 @@ class _HomeScreenState extends State<HomeScreen> {
 
   double getActivityFactor(String activity) {
     switch (activity) {
-      case 'นั่งทำงานอยู่กับที่และไม่ได้ออกกำลังกายเลย': return 1.2;
-      case 'ออกกำลังกายหรือเล่นกีฬาเล็กน้อยประมาณอาทิตย์ละ 1-3 วัน': return 1.375;
-      case 'ออกกำลังกายหรือเล่นกีฬาปานกลางประมาณอาทิตย์ละ 3-5 วัน': return 1.55;
-      case 'ออกกำลังกายหรือเล่นกีฬาอย่างหนักประมาณอาทิตย์ละ 6-7 วัน': return 1.725;
-      case 'ออกกำลังกายหรือเล่นที่กีฬาอย่างหนักมากทุกวันเช้า และเย็น': return 1.9;
-      default: return 1.0;
+      case 'นั่งทำงานอยู่กับที่และไม่ได้ออกกำลังกายเลย':
+        return 1.2;
+      case 'ออกกำลังกายหรือเล่นกีฬาเล็กน้อยประมาณอาทิตย์ละ 1-3 วัน':
+        return 1.375;
+      case 'ออกกำลังกายหรือเล่นกีฬาปานกลางประมาณอาทิตย์ละ 3-5 วัน':
+        return 1.55;
+      case 'ออกกำลังกายหรือเล่นกีฬาอย่างหนักประมาณอาทิตย์ละ 6-7 วัน':
+        return 1.725;
+      case 'ออกกำลังกายหรือเล่นที่กีฬาอย่างหนักมากทุกวันเช้า และเย็น':
+        return 1.9;
+      default:
+        return 1.0;
     }
   }
 
-  double calculateAndSaveTDEE(String gender, double weight, double height, int age, String disease, String selectedActivity, String? goalType) {
+  double calculateAndSaveTDEE(String gender, double weight, double height,
+      int age, String disease, String selectedActivity, String? goalType) {
     double bmr = calculateBMR(gender, weight, height, age, disease);
     double activityFactor = getActivityFactor(selectedActivity);
     double calculatedTDEE = bmr * activityFactor;
@@ -138,7 +155,10 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> saveTDEEToFirestore(double tdee) async {
     User? user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .update({
         'tdee': tdee,
       });
     }
@@ -163,17 +183,29 @@ class _HomeScreenState extends State<HomeScreen> {
           color: textColorTitle,
         ),
         actions: [
-         // ส่วนของปุ่มกระดิ่งใน AppBar
-IconButton(
-  icon: Icon(Icons.notifications, color: Colors.redAccent),
-  onPressed: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => NotificationScreen()),
-    );
-  },
-)
-
+          // ส่วนของปุ่มกระดิ่งใน AppBar
+          IconButton(
+            icon: Icon(Icons.notifications, color: Colors.redAccent),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => NotificationScreen()),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout, color: backgroundBlue),
+            onPressed: () {
+              if (_uid != null) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => LoginScreen(),
+                  ),
+                );
+              }
+            },
+          ),
         ],
       ),
       body: SingleChildScrollView(
@@ -190,8 +222,53 @@ IconButton(
             const SizedBox(height: 30),
             GoalAndDiaryRow(onDiaryBack: fetchConsumedCalories),
             const SizedBox(height: 20),
-            MenuPlanningCard(),
-            const SizedBox(height: 30),
+            // ★ ปุ่ม “หน้าแนะนำเมนู” ★
+            GestureDetector(
+              onTap: () {
+                if (_uid != null) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => RecommendationScreen(userId: _uid!),
+                    ),
+                  );
+                }
+              },
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: backgroundGreen,
+                  borderRadius: BorderRadius.circular(15),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.5),
+                      spreadRadius: 2,
+                      blurRadius: 5,
+                    ),
+                  ],
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.thumb_up, size: 40, color: Colors.white),
+                    SizedBox(width: 16),
+                    Text(
+                      'เมนูแนะนำสำหรับคุณ',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            //const SizedBox(height: 10),
+            WaterAndPlanRow(
+              onDiaryBack: () {},
+            ),
+            const SizedBox(height: 20),
           ],
         ),
       ),
@@ -214,6 +291,63 @@ class GoalAndDiaryRow extends StatelessWidget {
         const SizedBox(width: 16),
         Expanded(child: FoodDiaryCard(onBack: onDiaryBack)),
       ],
+    );
+  }
+}
+
+class WaterAndPlanRow extends StatelessWidget {
+  final VoidCallback onDiaryBack;
+
+  const WaterAndPlanRow({super.key, required this.onDiaryBack});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Expanded(child: Water()),
+        const SizedBox(width: 16),
+        Expanded(child: MenuPlanningCard()),
+      ],
+    );
+  }
+}
+
+class Water extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => Waterscreen()),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(15),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.3),
+              blurRadius: 10.0,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: const Column(
+          children: [
+            Image(
+              image: AssetImage('assets/images/water.png'),
+              height: 50,
+            ),
+            SizedBox(height: 10),
+            Text('บันทึกการดื่มน้ำ',
+                style: TextStyle(fontSize: 16, color: backgroundBlue,fontWeight: FontWeight.bold)),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -288,7 +422,8 @@ class FoodDiaryCard extends StatelessWidget {
         ),
         child: const Column(
           children: [
-            Text('Food Diary', style: TextStyle(fontSize: 16, color: Colors.white)),
+            Text('Food Diary',
+                style: TextStyle(fontSize: 16, color: Colors.white)),
             SizedBox(height: 10),
             Image(
               image: AssetImage("assets/images/FoodDiary.png"),
@@ -308,7 +443,11 @@ class MenuPlanningCard extends StatelessWidget {
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => PlanMenuScreen()),
+          MaterialPageRoute(
+            builder: (context) => PlanMenuScreen(
+              userId: '',
+            ),
+          ),
         );
       },
       child: Container(
@@ -324,50 +463,21 @@ class MenuPlanningCard extends StatelessWidget {
             ),
           ],
         ),
-        child: Row(
+        child: const Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Image.asset(
-              'assets/images/healthy.png',
-              width: 100,
-              height: 100,
-              fit: BoxFit.cover,
+            Image(
+              image: AssetImage('assets/images/healthy.png'),
+              height: 50,
             ),
-            const SizedBox(width: 16),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Menu Planning',
-                  style: TextStyle(
-                    color: backgroundHead,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      vertical: 4.0, horizontal: 8.0),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Text(
-                    'มื้อเที่ยงวันนี้',
-                    style: TextStyle(
-                      color: backgroundYellow,
-                      fontSize: 14,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'ก๋วยเตี๋ยวต้มยำ',
-                  style: TextStyle(
-                    color: Colors.white,
-                  ),
-                ),
-              ],
+            SizedBox(height: 10),
+            Text(
+              'Menu Planning',
+              style: TextStyle(
+                color: backgroundHead,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ],
         ),
@@ -375,6 +485,7 @@ class MenuPlanningCard extends StatelessWidget {
     );
   }
 }
+
 
 class CalorieCard extends StatelessWidget {
   final double tdee;
@@ -457,7 +568,8 @@ class CalorieCard extends StatelessWidget {
               ),
               const SizedBox(height: 20),
               Container(
-                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                 decoration: BoxDecoration(
                   color: backgroundPink,
                   borderRadius: BorderRadius.circular(23),

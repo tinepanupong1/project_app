@@ -3,244 +3,294 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:project_app/component/constant.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 
 class WeightControlScreen extends StatefulWidget {
+  const WeightControlScreen({Key? key}) : super(key: key);
+
   @override
   _WeightControlScreenState createState() => _WeightControlScreenState();
 }
 
 class _WeightControlScreenState extends State<WeightControlScreen> {
-  double currentWeight = 0.0; // น้ำหนักปัจจุบันจาก Firebase
-  double goalWeight = 0.0;    // น้ำหนักเป้าหมายที่ตั้งไว้
-  String goalType = 'Select Occupation'; // fallback เมื่อไม่มีการตั้งค่า
-  double targetDuration = 12; // ระยะเวลา (สัปดาห์)
+  double currentWeight = 0.0;
+  double goalWeight = 0.0;
+  String goalType = 'Select Occupation';
+  double targetDuration = 12;
   final TextEditingController currentWeightController = TextEditingController();
   final TextEditingController goalWeightController = TextEditingController();
-  DateTime selectedDate = DateTime.now(); // วันที่สำหรับบันทึกน้ำหนัก
-  List<FlSpot> weightDataPoints = [];     // จุดข้อมูลสำหรับกราฟน้ำหนัก
+  DateTime selectedDate = DateTime.now();
+  List<FlSpot> weightDataPoints = [];
+
+  late YoutubePlayerController _youtubeController;
 
   @override
   void initState() {
     super.initState();
-    fetchUserData(); // ดึงข้อมูลจาก Firebase เมื่อเริ่มใช้งาน
+    fetchUserData();
+    _youtubeController = YoutubePlayerController(
+      initialVideoId: YoutubePlayer.convertUrlToId(
+        'https://youtu.be/zPdbf1OdB9E',
+      )!,
+      flags: const YoutubePlayerFlags(autoPlay: false, mute: false),
+    );
+  }
+
+  @override
+  void dispose() {
+    _youtubeController.dispose();
+    currentWeightController.dispose();
+    goalWeightController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _launchURL(String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    }
   }
 
   Future<void> fetchUserData() async {
-    User? user = FirebaseAuth.instance.currentUser;
+    final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    var userDocument = await FirebaseFirestore.instance
+    final doc = await FirebaseFirestore.instance
         .collection('users')
         .doc(user.uid)
         .get();
-
-    if (userDocument.exists) {
+    if (doc.exists) {
       setState(() {
-        currentWeight = (userDocument['weight'] as num?)?.toDouble() ?? 0.0;
-        goalWeight = (userDocument['goalWeight'] as num?)?.toDouble() ?? 0.0;
-        targetDuration = (userDocument['targetDuration'] as num?)?.toDouble() ?? 12.0;
-        // ถ้าใน Firebase ไม่มี goalType ให้ fallback เป็น "Select Occupation"
-        goalType = userDocument['goalType'] ?? 'Select Occupation';
+        currentWeight = (doc['weight'] as num?)?.toDouble() ?? 0.0;
+        goalWeight = (doc['goalWeight'] as num?)?.toDouble() ?? 0.0;
+        targetDuration = (doc['targetDuration'] as num?)?.toDouble() ?? 12.0;
+        goalType = doc['goalType'] ?? 'Select Occupation';
       });
       currentWeightController.text = currentWeight.toString();
       goalWeightController.text = goalWeight.toString();
     }
 
-    var weightHistorySnapshot = await FirebaseFirestore.instance
+    final snap = await FirebaseFirestore.instance
         .collection('users')
         .doc(user.uid)
         .collection('weightHistory')
-        .orderBy('date', descending: false)
+        .orderBy('date')
         .get();
-
-    List<FlSpot> newDataPoints = [];
-    int index = 0;
-    for (var doc in weightHistorySnapshot.docs) {
-      double weight = (doc['weight'] as num).toDouble();
-      newDataPoints.add(FlSpot(index.toDouble(), weight));
-      index++;
+    final pts = <FlSpot>[];
+    for (var i = 0; i < snap.docs.length; i++) {
+      final w = (snap.docs[i]['weight'] as num).toDouble();
+      pts.add(FlSpot(i.toDouble(), w));
     }
-    setState(() {
-      weightDataPoints = newDataPoints;
-    });
+    setState(() => weightDataPoints = pts);
 
-    // แจ้งเตือนหากน้ำหนักปัจจุบันเท่ากับเป้าหมาย (และเป้าหมายถูกตั้งไว้)
     if (currentWeight == goalWeight && goalWeight != 0.0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("ยินดีด้วย! คุณบรรลุเป้าหมายแล้ว")),
+        const SnackBar(content: Text('ยินดีด้วย! คุณบรรลุเป้าหมายแล้ว')),
       );
     }
   }
 
   Future<void> saveCurrentWeight() async {
-    User? user = FirebaseAuth.instance.currentUser;
+    final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    double newWeight = double.tryParse(currentWeightController.text) ?? 0.0;
-    var existingData = await FirebaseFirestore.instance
+    final newWeight = double.tryParse(currentWeightController.text) ?? 0.0;
+    final ts = Timestamp.fromDate(selectedDate);
+    final existing = await FirebaseFirestore.instance
         .collection('users')
         .doc(user.uid)
         .collection('weightHistory')
-        .where('date', isEqualTo: Timestamp.fromDate(selectedDate))
+        .where('date', isEqualTo: ts)
         .get();
-
-    if (existingData.docs.isNotEmpty) {
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('weightHistory')
-          .doc(existingData.docs.first.id)
-          .update({'weight': newWeight});
+    if (existing.docs.isNotEmpty) {
+      await existing.docs.first.reference.update({'weight': newWeight});
     } else {
       await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
           .collection('weightHistory')
-          .add({
-        'weight': newWeight,
-        'date': Timestamp.fromDate(selectedDate),
-      });
+          .add({'date': ts, 'weight': newWeight});
     }
-    await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
-      'weight': newWeight,
-    });
-    setState(() {
-      currentWeight = newWeight;
-      fetchUserData();
-    });
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .update({'weight': newWeight});
+
+    setState(() => currentWeight = newWeight);
+    await fetchUserData();
+
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("บันทึกน้ำหนักปัจจุบันเรียบร้อย!")),
+      const SnackBar(content: Text('บันทึกน้ำหนักปัจจุบันเรียบร้อย!')),
     );
   }
 
   Future<void> saveGoalData() async {
-    // หาก goalType เป็น "รักษาน้ำหนัก" ให้แจ้งเตือนไม่ให้แก้ไขเป้าหมาย
     if (goalType == 'รักษาน้ำหนัก') {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("กรุณายกเลิกเป้าหมายรักษาน้ำหนักก่อน")),
+        const SnackBar(
+            content: Text('กรุณายกเลิกเป้าหมายรักษาน้ำหนักก่อน')),
       );
       return;
     }
-    double targetWeight = double.tryParse(goalWeightController.text) ?? 0.0;
-    double weightDiff = (targetWeight - currentWeight).abs();
-    double maxAllowedChange = targetDuration * 0.5;
-
-    if (weightDiff > maxAllowedChange) {
+    final target = double.tryParse(goalWeightController.text) ?? 0.0;
+    if ((target - currentWeight).abs() > targetDuration * 0.5) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text("เป้าหมายเกินขีดจำกัดความปลอดภัย กรุณาปรับเป้าหมาย")),
+        const SnackBar(content: Text('เป้าหมายเกินขีดจำกัดความปลอดภัย')),
       );
-    } else {
-      User? user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
-          'goalWeight': targetWeight,
-          'targetDuration': targetDuration,
-          'goalType': goalType,
-        });
-        setState(() {
-          goalWeight = targetWeight;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("บันทึกเป้าหมายเรียบร้อย!")),
-        );
-      }
+      return;
+    }
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .update({
+        'goalWeight': target,
+        'targetDuration': targetDuration,
+        'goalType': goalType,
+      });
+      setState(() => goalWeight = target);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('บันทึกเป้าหมายเรียบร้อย!')),
+      );
     }
   }
 
   Future<void> cancelGoal() async {
-    User? user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
-        'goalType': null,
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("ยกเลิกเป้าหมายเรียบร้อย")),
-      );
-      setState(() {
-        goalType = 'Select Occupation';
-      });
-    }
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .update({'goalType': null});
+    setState(() => goalType = 'Select Occupation');
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('ยกเลิกเป้าหมายเรียบร้อย')),
+    );
   }
 
   Future<void> _selectDate(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
+    final picked = await showDatePicker(
       context: context,
       initialDate: selectedDate,
       firstDate: DateTime(2000),
       lastDate: DateTime.now(),
     );
     if (picked != null && picked != selectedDate) {
-      setState(() {
-        selectedDate = picked;
-      });
+      setState(() => selectedDate = picked);
     }
+  }
+
+  void _showInfoDialog() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('ข้อมูลเพิ่มเติม'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                'ระบบได้กำหนดการลดน้ำหนัก\nและเพิ่มน้ำหนักได้สัปดาห์ละ 0.5 กิโลกรัม สูงสุด 12 สัปดาห์',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                children: [
+                  TextButton(
+                    onPressed: () => _launchURL(
+                        'https://www.thaihealth.or.th/ลดน้ำหนักอย่างไรให้ปลอ/'),
+                    child: const Text('ลดน้ำหนัก (อ่าน)'),
+                  ),
+                  TextButton(
+                    onPressed: () => _launchURL(
+                        'https://www.phyathai.com/th/article/3236-ไม่จำเป็นต้องอด?srsltid=AfmBOopF44vIYHY1GoVpdfPIhOHzMjOTmFANf1rKUzjRllUcGVXvXpLH'),
+                    child: const Text('บทความที่สอง'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              AspectRatio(
+                aspectRatio: 16 / 9,
+                child: YoutubePlayer(
+                  controller: _youtubeController,
+                  showVideoProgressIndicator: true,
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('ปิด'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFFFF7EB),
+      backgroundColor: const Color(0xFFFFF7EB),
       appBar: AppBar(
-        title: const Text('ควบคุมน้ำหนัก', style: TextStyle(color: Colors.black)),
+        title:
+            const Text('ควบคุมน้ำหนัก', style: TextStyle(color: Colors.black)),
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
-        titleTextStyle: const TextStyle(
-          fontSize: 24,
-          color: Colors.black,
-          fontWeight: FontWeight.bold,
-        ),
         iconTheme: const IconThemeData(color: Colors.black),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.info_outline, color: Colors.black),
+            onPressed: _showInfoDialog,
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // แสดงน้ำหนักปัจจุบันกับเป้าหมาย
+            const SizedBox(height: 20),
+            // น้ำหนักปัจจุบัน -> เป้าหมาย
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text("${currentWeight.toStringAsFixed(1)} kg",
-                    style: const TextStyle(fontSize: 24, color: Colors.black)),
-                const Icon(Icons.arrow_forward, color: Colors.black),
-                Text("${goalWeight.toStringAsFixed(1)} kg",
-                    style: const TextStyle(fontSize: 24, color: Colors.black)),
+                Text('${currentWeight.toStringAsFixed(1)} kg',
+                    style: const TextStyle(fontSize: 24)),
+                const Icon(Icons.arrow_forward),
+                Text('${goalWeight.toStringAsFixed(1)} kg',
+                    style: const TextStyle(fontSize: 24)),
               ],
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 20),
             // กราฟน้ำหนัก
             Container(
               height: 180,
               color: Colors.orange.shade50,
               child: weightDataPoints.isEmpty
-                  ? const Center(
-                      child: Text(
-                        "No data available",
-                        style: TextStyle(color: Colors.black, fontSize: 16),
-                      ),
-                    )
-                  : LineChart(
-                      LineChartData(
-                        lineBarsData: [
-                          LineChartBarData(
-                            spots: weightDataPoints,
-                            isCurved: true,
-                            colors: [Colors.orange],
-                            barWidth: 3,
-                            belowBarData: BarAreaData(
+                  ? const Center(child: Text('No data available'))
+                  : LineChart(LineChartData(
+                      lineBarsData: [
+                        LineChartBarData(
+                          spots: weightDataPoints,
+                          isCurved: true,
+                          colors: [Colors.orange],
+                          barWidth: 3,
+                          belowBarData: BarAreaData(
                               show: true,
-                              colors: [Colors.orange.withOpacity(0.3)],
-                            ),
-                            dotData: FlDotData(show: true),
-                          ),
-                        ],
-                      ),
-                    ),
+                              colors: [Colors.orange.withOpacity(0.3)]),
+                        ),
+                      ],
+                    )),
             ),
             const SizedBox(height: 20),
-            // TextField สำหรับบันทึกน้ำหนักวันนี้
+            // ฟอร์มบันทึกน้ำหนักวันนี้
             TextField(
               controller: currentWeightController,
               keyboardType: TextInputType.number,
@@ -250,29 +300,22 @@ class _WeightControlScreenState extends State<WeightControlScreen> {
                 filled: true,
                 fillColor: Colors.white,
                 enabledBorder: OutlineInputBorder(
-                  borderSide: const BorderSide(
-                      color: backgroundHead, width: 1.5),
+                  borderSide:
+                      const BorderSide(color: backgroundHead, width: 1.5),
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
             ),
             const SizedBox(height: 10),
-            // Row สำหรับเลือกวันที่
             Row(
               children: [
                 ElevatedButton(
                   onPressed: () => _selectDate(context),
-                  child: Text(
-                    "เลือกวันที่",
-                    style: TextStyle(color: backgroundPink),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                  ),
+                  child: Text('เลือกวันที่', style: TextStyle(color: backgroundPink)),
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
                 ),
                 const SizedBox(width: 10),
-                Text("${selectedDate.toLocal()}".split(' ')[0],
-                    style: const TextStyle(fontSize: 16)),
+                Text('${selectedDate.toLocal()}'.split(' ')[0]),
               ],
             ),
             const SizedBox(height: 10),

@@ -94,15 +94,6 @@ class GoalScreen extends StatelessWidget {
                   destination: MaintainWeightScreen(),
                 ),
                 const SizedBox(height: 20),
-                goalButton(
-                  context,
-                  icon: Icons.health_and_safety,
-                  text: 'ดื่มน้ำให้เพียงพอ',
-                  color: Colors.orange.shade100,
-                  iconColor: Colors.orange.shade600,
-                  destination: Waterscreen(),
-                ),
-                const SizedBox(height: 20),
                 FloatingActionButton(
                   onPressed: () {
                     Navigator.push(
