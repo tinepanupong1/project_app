@@ -277,6 +277,120 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
+class MenuPlanCardToday extends StatefulWidget {
+  const MenuPlanCardToday({super.key});
+
+  @override
+  State<MenuPlanCardToday> createState() => _MenuPlanCardTodayState();
+}
+
+class _MenuPlanCardTodayState extends State<MenuPlanCardToday> {
+  Map<String, String?> _todayPlan = {
+    'breakfast': null,
+    'lunch': null,
+    'dinner': null,
+    'snacks': null,
+  };
+  bool _loading = true;
+  String? _uid;
+
+  @override
+  void initState() {
+    super.initState();
+    _uid = FirebaseAuth.instance.currentUser?.uid;
+    fetchTodayPlan();
+  }
+
+  String get todayDocId {
+    final now = DateTime.now();
+    return '${now.day}-${now.month}-${now.year}';
+  }
+
+  Future<void> fetchTodayPlan() async {
+    if (_uid == null) return;
+    final doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(_uid)
+        .collection('meal_plans')
+        .doc(todayDocId)
+        .get();
+
+    if (doc.exists) {
+      final data = doc.data();
+      if (data != null && data['meals'] is Map) {
+        final meals = Map<String, dynamic>.from(data['meals']);
+        setState(() {
+          _todayPlan = meals.map((k, v) => MapEntry(k, v?.toString()));
+          _loading = false;
+        });
+      }
+    } else {
+      setState(() => _loading = false);
+    }
+  }
+
+  Widget _buildSlot(String slot, String label) {
+    final food = _todayPlan[slot];
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 4))
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: TextStyle(fontWeight: FontWeight.bold)),
+          Text(food ?? 'ยังไม่เลือกเมนู', style: TextStyle(color: Colors.grey[700]))
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('เมนูวันนี้',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            TextButton.icon(
+              icon: Icon(Icons.edit_note),
+              label: Text('วางแผนเมนู'),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => RecommendationScreen(userId: _uid!),
+                  ),
+                );
+              },
+            )
+          ],
+        ),
+        const SizedBox(height: 10),
+        if (_loading)
+          Center(child: CircularProgressIndicator())
+        else ...[
+          _buildSlot('breakfast', 'มื้อเช้า'),
+          const SizedBox(height: 10),
+          _buildSlot('lunch', 'มื้อกลางวัน'),
+          const SizedBox(height: 10),
+          _buildSlot('dinner', 'มื้อเย็น'),
+          const SizedBox(height: 10),
+          _buildSlot('snacks', 'ของว่าง'),
+        ]
+      ],
+    );
+  }
+}
+
 class GoalAndDiaryRow extends StatelessWidget {
   final VoidCallback onDiaryBack;
 
@@ -307,7 +421,8 @@ class WaterAndPlanRow extends StatelessWidget {
       children: [
         Expanded(child: Water()),
         const SizedBox(width: 16),
-        Expanded(child: MenuPlanningCard()),
+        //Expanded(child: MenuPlanningCard()),
+        MenuPlanCardToday(),
       ],
     );
   }
