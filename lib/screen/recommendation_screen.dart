@@ -23,6 +23,7 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
     'dinner': null,
     'snacks': null,
   };
+  double _totalSelectedCalories = 0.0;
 
   static const apiBase = 'http://10.0.2.2:5000';
 
@@ -39,19 +40,16 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
 
   Future<void> _fetchAndRecommend() async {
     setState(() => _loading = true);
-
     final body = {
       'user_id': widget.userId,
       'top_n_meals': 3,
       'top_n_snacks': 2,
     };
-
     final rResp = await http.post(
       Uri.parse('$apiBase/recommend'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode(body),
     );
-
     if (rResp.statusCode == 200) {
       final data = jsonDecode(rResp.body)['recommendations'] as Map<String, dynamic>;
       setState(() {
@@ -60,32 +58,37 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
     } else {
       setState(() => _recs = {});
     }
-
     setState(() => _loading = false);
+  }
+
+  void _updateTotalCalories() {
+    double sum = 0.0;
+    _recs.forEach((slot, list) {
+      final name = _selectedPlan[slot];
+      if (name != null) {
+        final item = list.firstWhere(
+            (m) => m['food_name'] == name,
+            orElse: () => null);
+        if (item != null) sum += (item['calories'] ?? 0).toDouble();
+      }
+    });
+    setState(() => _totalSelectedCalories = sum);
   }
 
   Future<void> _refreshSlot(String slot) async {
     setState(() => _slotLoading[slot] = true);
-
-    final body = {
-      'user_id': widget.userId,
-      'slot': slot,
-      'top_n': slot == 'snacks' ? 2 : 3,
-    };
-
+    final body = {'user_id': widget.userId, 'slot': slot, 'top_n': slot == 'snacks' ? 2 : 3};
     final rResp = await http.post(
       Uri.parse('$apiBase/recommend/refresh'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode(body),
     );
-
     if (rResp.statusCode == 200) {
       final data = jsonDecode(rResp.body) as Map<String, dynamic>;
       setState(() {
         _recs[slot] = List<dynamic>.from(data[slot]);
       });
     }
-
     setState(() => _slotLoading[slot] = false);
   }
 
@@ -106,49 +109,49 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
     });
 
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text('บันทึกแผนสำเร็จ'),
+      content: Text('บันทึกแผนสำเร็จ: ปริมาณแคลอรี่รวม $_totalSelectedCalories kcal'),
     ));
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) {
-      return Scaffold(
-        appBar: AppBar(title: Text('วางแผนเมนู')),
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-
+    if (_loading) return Scaffold(
+      appBar: AppBar(title: const Text('วางแผนเมนู')),
+      body: const Center(child: CircularProgressIndicator()),
+    );
     return Scaffold(
-      appBar: AppBar(title: Text('วางแผนเมนู')),
+      appBar: AppBar(title: const Text('วางแผนเมนู')),
       body: ListView(
-        padding: EdgeInsets.all(12),
+        padding: const EdgeInsets.all(12),
         children: [
+          // Simple user guidance
+          Card(
+            color: Colors.blue.shade50,
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: const Text(
+                '% คะแนนความเหมาะสม \n'
+                'คิดจากพลังงานที่ใกล้เคียงเป้าหมายและเมนูที่แพ้',
+                style: TextStyle(fontSize: 14),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
           ..._recs.entries.map((entry) {
             final slot = entry.key;
             final list = entry.value;
-            final isSlotLoading = _slotLoading[slot] == true;
+            final isLoading = _slotLoading[slot] == true;
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      _slotLabel(slot),
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                    ),
-                    isSlotLoading
-                        ? Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: SizedBox(
-                              height: 18,
-                              width: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
-                          )
+                    Text(_slotLabel(slot), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                    isLoading
+                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
                         : IconButton(
-                            icon: Icon(Icons.refresh),
+                            icon: const Icon(Icons.refresh),
                             tooltip: 'รีเฟรช $slot',
                             onPressed: () => _refreshSlot(slot),
                           ),
@@ -157,63 +160,67 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
                 if (_selectedPlan[slot] != null)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Text(
-                      'เลือกแล้ว: ${_selectedPlan[slot]}',
-                      style: TextStyle(color: Colors.green[800]),
-                    ),
+                    child: Text('เลือกแล้ว: ${_selectedPlan[slot]}', style: TextStyle(color: Colors.green.shade800)),
                   ),
                 ...list.map((m) {
-                  final ingredients = (m['ingredients'] as List<dynamic>?)?.cast<String>().join(', ') ?? 'ไม่มีข้อมูลส่วนผสม';
+                  final ingredients = (m['ingredients'] as List<dynamic>?)
+                          ?.cast<String>()
+                          .join(', ') ?? 'ไม่มีข้อมูลส่วนผสม';
                   return Card(
-                    margin: EdgeInsets.symmetric(vertical: 6),
+                    margin: const EdgeInsets.symmetric(vertical: 6),
                     elevation: 3,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     child: Padding(
-                      padding: EdgeInsets.all(12),
+                      padding: const EdgeInsets.all(12),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           if (m['img'] != null)
                             ClipRRect(
                               borderRadius: BorderRadius.circular(8),
-                              child: Image.network(
-                                m['img'],
-                                height: 140,
-                                width: double.infinity,
-                                fit: BoxFit.cover,
-                              ),
+                              child: Image.network(m['img'], height: 140, width: double.infinity, fit: BoxFit.cover),
                             ),
-                          SizedBox(height: 8),
+                          const SizedBox(height: 8),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Expanded(
-                                child: Text(
-                                  m['food_name'] ?? '',
-                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                                ),
+                                child: Text(m['food_name'] ?? '', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                               ),
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
                                   Text('${m['calories']} kcal'),
-                                  Text('${m['percent']}%', style: TextStyle(color: Colors.green)),
+                                  InkWell(
+                                    onTap: () {
+                                      showDialog(
+                                        context: context,
+                                        builder: (_) => AlertDialog(
+                                          title: const Text('คะแนนคำนวณอย่างไร'),
+                                          content: const Text('percent = (1 - |calories - target| / target) * 100'),
+                                          actions: [
+                                            TextButton(onPressed: () => Navigator.pop(context), child: const Text('ปิด')),
+                                          ],
+                                        ),
+                                      );
+                                    },
+                                    child: Text('${m['percent']}%', style: const TextStyle(color: Colors.green)),
+                                  ),
                                 ],
                               ),
                             ],
                           ),
-                          SizedBox(height: 8),
-                          Text('ส่วนประกอบ: $ingredients', style: TextStyle(color: Colors.grey[700])),
+                          const SizedBox(height: 8),
+                          Text('ส่วนประกอบ: $ingredients', style: TextStyle(color: Colors.grey.shade700)),
                           Align(
                             alignment: Alignment.centerRight,
                             child: TextButton.icon(
-                              icon: Icon(Icons.check_circle_outline),
-                              label: Text('เลือกเมนูนี้'),
+                              icon: const Icon(Icons.check_circle_outline),
+                              label: const Text('เลือกเมนูนี้'),
                               onPressed: () {
                                 setState(() {
                                   _selectedPlan[slot] = m['food_name'];
+                                  _updateTotalCalories();
                                 });
                               },
                             ),
@@ -223,21 +230,21 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
                     ),
                   );
                 }).toList(),
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
               ],
             );
-          }),
-          SizedBox(height: 32),
+          }).toList(),
+          const SizedBox(height: 32),
           ElevatedButton.icon(
             onPressed: _savePlan,
-            icon: Icon(Icons.save),
-            label: Text('บันทึกแผนวันนี้'),
+            icon: const Icon(Icons.save),
+            label: Text('บันทึกแผนวันนี้ ($_totalSelectedCalories kcal)'),
             style: ElevatedButton.styleFrom(
-              padding: EdgeInsets.symmetric(vertical: 14),
-              textStyle: TextStyle(fontSize: 18),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              textStyle: const TextStyle(fontSize: 18),
             ),
           ),
-          SizedBox(height: 32),
+          const SizedBox(height: 32),
         ],
       ),
     );
@@ -245,16 +252,11 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
 
   String _slotLabel(String key) {
     switch (key) {
-      case 'breakfast':
-        return 'มื้อเช้า';
-      case 'lunch':
-        return 'มื้อกลางวัน';
-      case 'dinner':
-        return 'มื้อเย็น';
-      case 'snacks':
-        return 'ของว่าง';
-      default:
-        return key;
+      case 'breakfast': return 'มื้อเช้า';
+      case 'lunch':     return 'มื้อกลางวัน';
+      case 'dinner':    return 'มื้อเย็น';
+      case 'snacks':    return 'ของว่าง';
+      default:          return key;
     }
   }
 }
