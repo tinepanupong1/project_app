@@ -15,17 +15,20 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   late String uid;
 
-  // Controllers สำหรับข้อมูลส่วนตัว
+  // Controllers
   final nameController     = TextEditingController();
   final genderController   = TextEditingController();
   final ageController      = TextEditingController();
   final weightController   = TextEditingController();
   final heightController   = TextEditingController();
   final diseaseController  = TextEditingController();
-  final allergyController  = TextEditingController();
   final activityController = TextEditingController();
+  final newAllergyController = TextEditingController();
 
-  // กราฟรายวัน
+  // Internal list for allergies
+  List<String> _allergiesList = [];
+
+  // Chart data
   List<FlSpot> _calorieSpots = [];
   bool _isChartLoading = true;
   int _daysInMonth = 30;
@@ -44,27 +47,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _fetchDailyCalorieData();
   }
 
-  /// 1. โหลดข้อมูลโปรไฟล์
   Future<void> _fetchProfileData() async {
-    final doc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(uid)
-        .get();
+    final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
     if (!doc.exists) return;
-
     final data = doc.data()!;
-    nameController.text     = data['name']      ?? '';
-    genderController.text   = data['gender']    ?? '';
-    ageController.text      = (data['age']      ?? '').toString();
-    weightController.text   = (data['weight']   ?? '').toString();
-    heightController.text   = (data['height']   ?? '').toString();
-    diseaseController.text  = data['disease']   ?? '';
-    allergyController.text  = data['allergies'] ?? '';
-    activityController.text = data['activity']  ?? '';
+
+    nameController.text   = data['name']   as String? ?? '';
+    genderController.text = data['gender'] as String? ?? '';
+    ageController.text    = (data['age']   as num?)?.toString() ?? '';
+    weightController.text= (data['weight']  as num?)?.toString() ?? '';
+    heightController.text= (data['height']  as num?)?.toString() ?? '';
+    diseaseController.text = data['disease'] as String? ?? '';
+
+    final rawAllergy = data['allergies'];
+    if (rawAllergy is List) {
+      _allergiesList = rawAllergy.map((e) => e.toString()).toList();
+    } else if (rawAllergy is String && rawAllergy.isNotEmpty) {
+      _allergiesList = rawAllergy.split(',').map((e) => e.trim()).toList();
+    } else {
+      _allergiesList = [];
+    }
+
+    activityController.text = data['activity'] as String? ?? '';
+
     setState(() {});
   }
 
-  /// 2. โหลด Food Diary เดือนปัจจุบัน แล้วรวมแคลอรี่เป็นรายวัน
   Future<void> _fetchDailyCalorieData() async {
     final now   = DateTime.now();
     final year  = now.year;
@@ -105,57 +113,110 @@ class _ProfileScreenState extends State<ProfileScreen> {
   double _calculateBMI() {
     final w = double.tryParse(weightController.text) ?? 0;
     final h = double.tryParse(heightController.text) ?? 0;
-    if (h > 0) return w / ((h / 100) * (h / 100));
-    return 0;
+    return h > 0 ? w / ((h / 100) * (h / 100)) : 0;
   }
 
   void _editProfile() {
+    final tmpName     = TextEditingController(text: nameController.text);
+    final tmpGender   = TextEditingController(text: genderController.text);
+    final tmpAge      = TextEditingController(text: ageController.text);
+    final tmpWeight   = TextEditingController(text: weightController.text);
+    final tmpHeight   = TextEditingController(text: heightController.text);
+    final tmpDisease  = TextEditingController(text: diseaseController.text);
+    final tmpActivity = TextEditingController(text: activityController.text);
+    final tmpAllergies = List<String>.from(_allergiesList);
+
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: backgroundColor,
-        title: const Text('Edit Profile', style: TextStyle(
-          fontFamily: 'Jua', fontSize: 30, fontWeight: FontWeight.w500,
-          color: Color(0xFF2A505A),
-        )),
-        content: SingleChildScrollView(
-          child: Column(
-            children: [
-              _buildTextField('Name', nameController),
-              _buildTextField('Gender', genderController),
-              _buildTextField('Age', ageController),
-              _buildTextField('Weight', weightController),
-              _buildTextField('Height', heightController),
-              _buildDiseaseDropdown(),
-              _buildTextField('Allergy', allergyController),
-              _buildActivityDropdown(),
-            ],
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          backgroundColor: backgroundColor,
+          title: const Text(
+            'Edit Profile',
+            style: TextStyle(
+              fontFamily: 'Jua', fontSize: 30, fontWeight: FontWeight.w500,
+              color: Color(0xFF2A505A),
+            ),
           ),
+          content: SingleChildScrollView(
+            child: Column(
+              children: [
+                _buildTextField('Name', tmpName),
+                _buildTextField('Gender', tmpGender),
+                _buildTextField('Age', tmpAge),
+                _buildTextField('Weight', tmpWeight),
+                _buildTextField('Height', tmpHeight),
+                _buildDiseaseDropdown(),
+                const SizedBox(height: 12),
+                Align(alignment: Alignment.centerLeft, child: const Text('Allergies', style: TextStyle(fontWeight: FontWeight.bold))),
+                Wrap(
+                  spacing: 6,
+                  children: tmpAllergies.map((allergy) => Chip(
+                    label: Text(allergy),
+                    onDeleted: () => setDialogState(() => tmpAllergies.remove(allergy)),
+                  )).toList(),
+                ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: newAllergyController,
+                        decoration: const InputDecoration(labelText: 'เพิ่มอาหารแพ้'),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.add),
+                      onPressed: () {
+                        final val = newAllergyController.text.trim();
+                        if (val.isNotEmpty && !tmpAllergies.contains(val)) {
+                          setDialogState(() => tmpAllergies.add(val));
+                          newAllergyController.clear();
+                        }
+                      },
+                    )
+                  ],
+                ),
+                const SizedBox(height: 12),
+                _buildActivityDropdown(),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              child: const Text('Cancel', style: TextStyle(color: Colors.redAccent)),
+              onPressed: () => Navigator.pop(context),
+            ),
+            TextButton(
+              child: const Text('Save', style: TextStyle(color: Colors.green)),
+              onPressed: () async {
+                nameController.text     = tmpName.text;
+                genderController.text   = tmpGender.text;
+                ageController.text      = tmpAge.text;
+                weightController.text   = tmpWeight.text;
+                heightController.text   = tmpHeight.text;
+                diseaseController.text  = tmpDisease.text;
+                activityController.text = tmpActivity.text;
+                _allergiesList          = List<String>.from(tmpAllergies);
+
+                await FirebaseFirestore.instance
+                    .collection('users')
+                    .doc(uid)
+                    .update({
+                  'name':      nameController.text,
+                  'gender':    genderController.text,
+                  'age':       int.tryParse(ageController.text) ?? 0,
+                  'weight':    double.tryParse(weightController.text) ?? 0,
+                  'height':    double.tryParse(heightController.text) ?? 0,
+                  'disease':   diseaseController.text,
+                  'allergies': _allergiesList,
+                  'activity':  activityController.text,
+                });
+                setState(() {});
+                Navigator.pop(context);
+              },
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            child: const Text('Cancel', style: TextStyle(color: Colors.redAccent)),
-            onPressed: () => Navigator.pop(context),
-          ),
-          TextButton(
-            child: const Text('Save', style: TextStyle(color: Colors.green)),
-            onPressed: () async {
-              await FirebaseFirestore.instance
-                  .collection('users').doc(uid).update({
-                'name':      nameController.text,
-                'gender':    genderController.text,
-                'age':       int.tryParse(ageController.text) ?? 0,
-                'weight':    double.tryParse(weightController.text) ?? 0,
-                'height':    double.tryParse(heightController.text) ?? 0,
-                'disease':   diseaseController.text,
-                'allergies': allergyController.text,
-                'activity':  activityController.text,
-              });
-              setState(() {});
-              Navigator.pop(context);
-            },
-          ),
-        ],
       ),
     );
   }
@@ -168,8 +229,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return DropdownButtonFormField<String>(
       decoration: const InputDecoration(labelText: 'Disease'),
       value: diseaseController.text.isEmpty ? null : diseaseController.text,
-      items: diseases.map((d)=> DropdownMenuItem(value: d, child: Text(d))).toList(),
-      onChanged: (v)=> setState(()=> diseaseController.text = v ?? ''),
+      items: diseases.map((d) => DropdownMenuItem(value: d, child: Text(d))).toList(),
+      onChanged: (v) => setState(() => diseaseController.text = v ?? ''),
     );
   }
 
@@ -182,10 +243,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
       'ออกกำลังกายหรือเล่นที่กีฬาอย่างหนักมากทุกวันเช้า และเย็น',
     ];
     return DropdownButtonFormField<String>(
+      isExpanded: true,
       decoration: const InputDecoration(labelText: 'Activity'),
       value: activityController.text.isEmpty ? null : activityController.text,
-      items: acts.map((a)=> DropdownMenuItem(value: a, child: Text(a))).toList(),
-      onChanged: (v)=> setState(()=> activityController.text = v ?? ''),
+      items: acts.map((a) => DropdownMenuItem(
+            value: a,
+            child: Text(
+              a,
+              softWrap: true,
+              overflow: TextOverflow.visible,
+            ),
+          )).toList(),
+      onChanged: (v) => setState(() => activityController.text = v ?? ''),
     );
   }
 
@@ -217,16 +286,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ======= หัวกราฟ =======
             Text(
               chartTitle,
-              style: const TextStyle(
-                fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87,
-              ),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-
-            // ======= กราฟรายวัน =======
             ClipRRect(
               borderRadius: BorderRadius.circular(20),
               child: Container(
@@ -244,17 +308,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             maxY: 2500,
                             titlesData: FlTitlesData(
                               leftTitles: SideTitles(showTitles: false),
-                              rightTitles: SideTitles(
-                                showTitles: true,
-                                interval: 500,
-                                getTitles: (v) => v.toInt().toString(),
-                                reservedSize: 40,
-                                margin: 8,
-                              ),
+                              rightTitles: SideTitles(showTitles: true, interval: 500, getTitles: (v) => v.toInt().toString(), reservedSize: 40, margin: 8),
                               bottomTitles: SideTitles(
                                 showTitles: true,
                                 interval: 1,
                                 getTitles: (v) => v.toInt().toString(),
+                                reservedSize: 24,
+                                margin: 8,
                               ),
                               topTitles: SideTitles(showTitles: false),
                             ),
@@ -274,8 +334,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
             const SizedBox(height: 20),
-
-            // ======= ข้อมูลส่วนตัว =======
+            // Profile card
             ProfileCard(
               name:     nameController.text,
               gender:   genderController.text,
@@ -283,7 +342,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               weight:   double.tryParse(weightController.text) ?? 0,
               height:   double.tryParse(heightController.text) ?? 0,
               disease:  diseaseController.text,
-              allergy:  allergyController.text,
+              allergy:  _allergiesList.join(', '),
               activity: activityController.text,
               bmi:      bmi,
               onEdit:   _editProfile,
@@ -295,7 +354,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 }
 
-// ProfileCard widget (ไม่แก้)
+// ProfileCard widget
 class ProfileCard extends StatelessWidget {
   final String name, gender, disease, allergy, activity;
   final int age;
@@ -341,9 +400,9 @@ class ProfileCard extends StatelessWidget {
           _buildInfoRow('อายุ', '$age'),
           _buildInfoRow('น้ำหนัก', '$weight kg'),
           _buildInfoRow('ส่วนสูง', '$height cm'),
-          _buildInfoRow('โรคที่เป็น', disease),
-          _buildInfoRow('อาหารแพ้', allergy),
-          _buildInfoRow('กิจกรรม', activity),
+          _buildInfoRow('โรคที่เป็น', disease.isNotEmpty ? disease : '-'),
+          _buildInfoRow('อาหารแพ้', allergy.isNotEmpty ? allergy : '-'),
+          _buildInfoRow('กิจกรรม', activity.isNotEmpty ? activity : '-'),
           const SizedBox(height: 12),
           Center(
             child: Container(
