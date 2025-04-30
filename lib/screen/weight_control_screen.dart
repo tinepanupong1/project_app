@@ -47,9 +47,7 @@ class _WeightControlScreenState extends State<WeightControlScreen> {
 
   Future<void> _launchURL(String url) async {
     final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
-    }
+    if (await canLaunchUrl(uri)) await launchUrl(uri);
   }
 
   Future<void> fetchUserData() async {
@@ -125,6 +123,11 @@ class _WeightControlScreenState extends State<WeightControlScreen> {
     );
   }
 
+  double _calculateTargetDuration(double from, double to) {
+    final diff = (to - from).abs();
+    return (diff / 0.5).clamp(1, 12);
+  }
+
   Future<void> saveGoalData() async {
     if (goalType == 'รักษาน้ำหนัก') {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -134,12 +137,7 @@ class _WeightControlScreenState extends State<WeightControlScreen> {
       return;
     }
     final target = double.tryParse(goalWeightController.text) ?? 0.0;
-    if ((target - currentWeight).abs() > targetDuration * 0.5) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('เป้าหมายเกินขีดจำกัดความปลอดภัย')),
-      );
-      return;
-    }
+    final duration = _calculateTargetDuration(currentWeight, target);
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       await FirebaseFirestore.instance
@@ -147,10 +145,13 @@ class _WeightControlScreenState extends State<WeightControlScreen> {
           .doc(user.uid)
           .update({
         'goalWeight': target,
-        'targetDuration': targetDuration,
+        'targetDuration': duration,
         'goalType': goalType,
       });
-      setState(() => goalWeight = target);
+      setState(() {
+        goalWeight = target;
+        targetDuration = duration;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('บันทึกเป้าหมายเรียบร้อย!')),
       );
@@ -238,8 +239,7 @@ class _WeightControlScreenState extends State<WeightControlScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFFFF7EB),
       appBar: AppBar(
-        title:
-            const Text('ควบคุมน้ำหนัก', style: TextStyle(color: Colors.black)),
+        title: const Text('ควบคุมน้ำหนัก', style: TextStyle(color: Colors.black)),
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
@@ -257,19 +257,15 @@ class _WeightControlScreenState extends State<WeightControlScreen> {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const SizedBox(height: 20),
-            // น้ำหนักปัจจุบัน -> เป้าหมาย
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('${currentWeight.toStringAsFixed(1)} kg',
-                    style: const TextStyle(fontSize: 24)),
+                Text('${currentWeight.toStringAsFixed(1)} kg', style: const TextStyle(fontSize: 24)),
                 const Icon(Icons.arrow_forward),
-                Text('${goalWeight.toStringAsFixed(1)} kg',
-                    style: const TextStyle(fontSize: 24)),
+                Text('${goalWeight.toStringAsFixed(1)} kg', style: const TextStyle(fontSize: 24)),
               ],
             ),
             const SizedBox(height: 20),
-            // กราฟน้ำหนัก
             Container(
               height: 180,
               color: Colors.orange.shade50,
@@ -282,15 +278,12 @@ class _WeightControlScreenState extends State<WeightControlScreen> {
                           isCurved: true,
                           colors: [Colors.orange],
                           barWidth: 3,
-                          belowBarData: BarAreaData(
-                              show: true,
-                              colors: [Colors.orange.withOpacity(0.3)]),
+                          belowBarData: BarAreaData(show: true, colors: [Colors.orange.withOpacity(0.3)]),
                         ),
                       ],
                     )),
             ),
             const SizedBox(height: 20),
-            // ฟอร์มบันทึกน้ำหนักวันนี้
             TextField(
               controller: currentWeightController,
               keyboardType: TextInputType.number,
@@ -300,8 +293,7 @@ class _WeightControlScreenState extends State<WeightControlScreen> {
                 filled: true,
                 fillColor: Colors.white,
                 enabledBorder: OutlineInputBorder(
-                  borderSide:
-                      const BorderSide(color: backgroundHead, width: 1.5),
+                  borderSide: const BorderSide(color: backgroundHead, width: 1.5),
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
@@ -316,24 +308,20 @@ class _WeightControlScreenState extends State<WeightControlScreen> {
                 ),
                 const SizedBox(width: 10),
                 Text('${selectedDate.toLocal()}'.split(' ')[0]),
+
               ],
             ),
             const SizedBox(height: 10),
-            // ปุ่มบันทึกน้ำหนักวันนี้
             ElevatedButton(
               onPressed: saveCurrentWeight,
               style: ElevatedButton.styleFrom(
                 backgroundColor: buttonSave,
                 padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 10),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
-              child: const Text('บันทึก',
-                  style: TextStyle(color: Colors.white, fontSize: 16)),
+              child: const Text('บันทึก', style: TextStyle(color: Colors.white, fontSize: 16)),
             ),
             const SizedBox(height: 20),
-            // กล่องตั้งเป้าหมายและตั้งค่าเป้าหมาย
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -342,9 +330,7 @@ class _WeightControlScreenState extends State<WeightControlScreen> {
               ),
               child: Column(
                 children: [
-                  // ถ้า goalType เป็น "รักษาน้ำหนัก" ให้แสดงข้อความและปุ่มยกเลิก
-                  // ถ้าเป็น "ลดน้ำหนัก" หรือ "เพิ่มน้ำหนัก" ให้แสดง Dropdown, TextField, Slider และปุ่มบันทึกเป้าหมาย
-                  goalType == "รักษาน้ำหนัก"
+                  goalType == 'รักษาน้ำหนัก'
                       ? Column(
                           children: [
                             Container(
@@ -352,66 +338,33 @@ class _WeightControlScreenState extends State<WeightControlScreen> {
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(10),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.1),
-                                    blurRadius: 8,
-                                  ),
-                                ],
+                                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8)],
                               ),
-                              child: const Text(
-                                'เป้าหมายของคุณ: รักษาน้ำหนัก',
-                                style: TextStyle(
-                                    fontSize: 18, fontWeight: FontWeight.bold),
-                              ),
+                              child: const Text('เป้าหมายของคุณ: รักษาน้ำหนัก', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                             ),
                             const SizedBox(height: 20),
                             ElevatedButton(
                               onPressed: cancelGoal,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 30, vertical: 15),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
+                                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                               ),
-                              child: const Text(
-                                'ยกเลิกเป้าหมาย',
-                                style: TextStyle(color: Colors.red, fontSize: 16),
-                              ),
+                              child: const Text('ยกเลิกเป้าหมาย', style: TextStyle(color: Colors.red, fontSize: 16)),
                             )
                           ],
                         )
                       : Column(
                           children: [
                             DropdownButtonFormField<String>(
-                              value: (goalType == 'ลดน้ำหนัก' ||
-                                      goalType == 'เพิ่มน้ำหนัก')
-                                  ? goalType
-                                  : null,
+                              value: (goalType == 'ลดน้ำหนัก' || goalType == 'เพิ่มน้ำหนัก') ? goalType : null,
                               hint: const Text('Select Occupation'),
-                              items: ['ลดน้ำหนัก', 'เพิ่มน้ำหนัก']
-                                  .map((String value) {
-                                return DropdownMenuItem<String>(
-                                  value: value,
-                                  child: Text(value),
-                                );
-                              }).toList(),
-                              onChanged: (newValue) {
-                                setState(() {
-                                  goalType = newValue!;
-                                });
-                              },
+                              items: ['ลดน้ำหนัก', 'เพิ่มน้ำหนัก'].map((value) => DropdownMenuItem(value: value, child: Text(value))).toList(),
+                              onChanged: (newValue) => setState(() => goalType = newValue!),
                               decoration: InputDecoration(
                                 labelText: 'เป้าหมาย',
-                                filled: true,
-                                fillColor: Colors.white,
-                                enabledBorder: OutlineInputBorder(
-                                  borderSide:
-                                      const BorderSide(color: backgroundHead, width: 1.5),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
+                                filled: true, 
+                                enabledBorder: OutlineInputBorder(borderSide: const BorderSide(color: backgroundHead, width: 1.5), borderRadius: BorderRadius.circular(10)),
                               ),
                             ),
                             const SizedBox(height: 10),
@@ -419,27 +372,16 @@ class _WeightControlScreenState extends State<WeightControlScreen> {
                               controller: goalWeightController,
                               keyboardType: TextInputType.number,
                               decoration: InputDecoration(
-                                labelText: 'น้ำหนักที่ต้องการ',
-                                suffixText: 'กก.',
-                                filled: true,
-                                fillColor: Colors.white,
-                                enabledBorder: OutlineInputBorder(
-                                  borderSide:
-                                      const BorderSide(color: backgroundHead, width: 1.5),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
+                                labelText: 'น้ำหนักที่ต้องการ', suffixText: 'กก.', filled: true, fillColor: Colors.white,
+                                enabledBorder: OutlineInputBorder(borderSide: const BorderSide(color: backgroundHead, width: 1.5), borderRadius: BorderRadius.circular(10)),
                               ),
-                              onChanged: (value) {
-                                setState(() {
-                                  goalWeight = double.tryParse(value) ?? 0.0;
-                                });
-                              },
+                              onChanged: (value) => setState(() => goalWeight = double.tryParse(value) ?? 0.0),
                             ),
                             const SizedBox(height: 10),
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text("ระยะเวลา (สัปดาห์): ${targetDuration.toInt()}"),
+                                Text('ระยะเวลา (สัปดาห์): ${targetDuration.toInt()}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                                 Slider(
                                   value: targetDuration,
                                   min: 1,
@@ -448,46 +390,24 @@ class _WeightControlScreenState extends State<WeightControlScreen> {
                                   label: targetDuration.toInt().toString(),
                                   activeColor: const Color.fromARGB(255, 15, 70, 116),
                                   inactiveColor: Colors.white,
-                                  onChanged: (value) {
-                                    setState(() {
-                                      targetDuration = value;
-                                    });
-                                  },
+                                  onChanged: (value) => setState(() => targetDuration = value),
                                 ),
+                                const SizedBox(height: 8),
+                                Text('ระบบคำนวณว่าควรใช้เวลา ${targetDuration.toInt()} สัปดาห์', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
                               ],
                             ),
                             const SizedBox(height: 10),
                             ElevatedButton(
                               onPressed: saveGoalData,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: buttonSave,
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 50, vertical: 15),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                              ),
-                              child: const Text(
-                                'บันทึกเป้าหมาย',
-                                style: TextStyle(color: Colors.white, fontSize: 16),
-                              ),
+                              style: ElevatedButton.styleFrom(backgroundColor: buttonSave, padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 15), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+                              child: const Text('บันทึกเป้าหมาย', style: TextStyle(color: Colors.white, fontSize: 16)),
                             ),
                             const SizedBox(height: 20),
                             ElevatedButton(
                               onPressed: cancelGoal,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 30, vertical: 15),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                              ),
-                              child: const Text(
-                                'ยกเลิกเป้าหมาย',
-                                style: TextStyle(color: Colors.red, fontSize: 16),
-                              ),
-                            )
+                              style: ElevatedButton.styleFrom(backgroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+                              child: const Text('ยกเลิกเป้าหมาย', style: TextStyle(color: Colors.red, fontSize: 16)),
+                            ),
                           ],
                         ),
                 ],
