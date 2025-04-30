@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart'; 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
@@ -11,80 +11,59 @@ class NotificationScreen extends StatefulWidget {
 class _NotificationScreenState extends State<NotificationScreen> {
   List<Map<String, String>> notifications = [];
 
-  @override
-  void initState() {
-    super.initState();
-    _fetchNotifications();
-  }
-
+  // ฟังก์ชันดึงข้อมูลแคลอรี่จาก Firestore สำหรับหลายวัน
   Future<void> _fetchNotifications() async {
     User? user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    // 🔹 ดึงข้อมูลอาการแพ้
-    DocumentSnapshot userDoc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .get();
+    // ใช้วันที่ที่ต้องการดึงข้อมูล (เช่น 29 และ 30 เมษายน)
+    DateTime currentDate = DateTime.now();
+    String currentDateFormatted = DateFormat('yyyy-MM-dd').format(currentDate);
 
-    List<dynamic> allergies = [];
-    var rawAllergies = userDoc['allergies'];
-    if (rawAllergies is List) {
-      allergies = rawAllergies;
-    } else if (rawAllergies is String) {
-      allergies = [rawAllergies];
-    }
-
-    print("🐔 User Allergies: $allergies");
-
-    // 🔹 ดึงข้อมูลเมนูของวันนี้
-    final dateKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
-    DocumentSnapshot foodDoc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .collection('food_diary')
-        .doc(dateKey)
-        .get();
-
-    if (!foodDoc.exists) {
-      print("📭 ไม่มีข้อมูล food_diary สำหรับวันที่ $dateKey");
-      return;
-    }
-
-    var data = foodDoc.data() as Map<String, dynamic>;
-    List<dynamic> entries = data['entries'] ?? [];
-
-    List<Map<String, String>> tempNoti = [];
-
-    for (var entry in entries) {
-      String food = entry['food'] ?? 'ไม่ทราบชื่ออาหาร';
-      List<dynamic> ingredients = entry['ingredients'] ?? [];
-
-      bool foundAllergy = false;
-
-      for (var ingredient in ingredients) {
-        for (var allergy in allergies) {
-          if (ingredient.toString().contains(allergy)) {
-            print("⚠️ พบสารก่อแพ้: $allergy ในเมนู $food");
-
-            tempNoti.add({
-              'date': DateFormat('dd MMMM yyyy').format(DateTime.now()),
-              'text': 'คุณทานเมนู "$food" ที่มีส่วนผสมที่คุณแพ้: $allergy',
-              'time': DateFormat('HH:mm').format(DateTime.now()),
-              'type': 'alert',
-            });
-
-            foundAllergy = true;
-            break; // หยุดตรวจ allergy ใน ingredient นี้
-          }
-        }
-        if (foundAllergy) break; // หยุดตรวจ ingredient ถ้าเจอแล้ว
+    // กำหนดวันที่ให้ดึงข้อมูลย้อนหลัง
+    List<String> dates = [];
+    if (currentDate.day != 1) {
+      // ดึงข้อมูลจากวันที่ 1 ถึงวันก่อนวันที่ปัจจุบัน
+      for (int i = 1; i < currentDate.day; i++) {
+        dates.add(DateFormat('yyyy-MM-dd').format(DateTime(currentDate.year, currentDate.month, i)));
       }
     }
 
-    setState(() {
-      notifications.addAll(tempNoti);
-    });
+    // ดึงข้อมูลแคลอรี่จาก Firestore สำหรับวันที่ที่ต้องการ
+    for (String date in dates) {
+      DocumentSnapshot foodDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('food_diary')
+          .doc(date)
+          .get();
+
+      if (foodDoc.exists) {
+        var data = foodDoc.data() as Map<String, dynamic>;
+        var entries = data['entries'] ?? [];
+
+        int dailyCalories = 0;
+
+        // คำนวณแคลอรี่รวมจากทุกเมนูที่ทานในวันนั้น
+        for (var entry in entries) {
+          dailyCalories += (entry['calories'] != null ? (entry['calories'] as num).toInt() : 0);
+        }
+
+        setState(() {
+          notifications.add({
+            'date': DateFormat('d MMMM yyyy').format(DateTime.parse(date)),
+            'text': 'แคลอรี่วันที่ $date คุณทานไปแล้ว $dailyCalories แคลอรี่ ',
+            'type': 'calories',
+          });
+        });
+      }
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchNotifications(); // เรียกใช้ฟังก์ชันดึงข้อมูลเมื่อเริ่มต้น
   }
 
   @override
@@ -92,9 +71,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
     String? currentDate;
 
     return Scaffold(
-      backgroundColor: Color(0xFFFDF4EB),
+      backgroundColor: const Color(0xFFFDF4EB),
       appBar: AppBar(
-        backgroundColor: Color(0xFFFDF4EB),
+        backgroundColor: const Color(0xFFFDF4EB),
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.pink),
@@ -110,7 +89,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
         ),
       ),
       body: ListView.builder(
-        padding: EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16),
         itemCount: notifications.length,
         itemBuilder: (context, index) {
           final item = notifications[index];
@@ -125,7 +104,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                   padding: const EdgeInsets.symmetric(vertical: 12.0),
                   child: Text(
                     item['date']!,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                       fontFamily: 'Prompt',
@@ -134,31 +113,23 @@ class _NotificationScreenState extends State<NotificationScreen> {
                   ),
                 ),
               Container(
-                margin: EdgeInsets.only(bottom: 12),
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
                   color: Colors.pink[100],
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.start, 
                   children: [
                     Expanded(
                       child: Text(
                         item['text']!,
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: Colors.black,
                           fontFamily: 'Prompt',
                           fontSize: 14,
                         ),
-                      ),
-                    ),
-                    Text(
-                      item['time']!,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'Prompt',
-                        fontSize: 14,
                       ),
                     ),
                   ],

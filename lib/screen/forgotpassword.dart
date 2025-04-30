@@ -1,5 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -11,15 +12,14 @@ class ForgotPasswordScreen extends StatefulWidget {
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final emailController = TextEditingController();
   final phoneController = TextEditingController();
-  final newPasswordController = TextEditingController();
 
+  // ฟังก์ชันส่งคำร้องขอเปลี่ยนรหัสผ่าน
   Future<void> submitRequest() async {
     String email = emailController.text.trim();
     String phone = phoneController.text.trim();
-    String newPassword = newPasswordController.text.trim();
 
     try {
-      // ค้นหา user ที่มี email ตรงกัน
+      // ค้นหาผู้ใช้จากอีเมล
       QuerySnapshot snapshot = await FirebaseFirestore.instance
           .collection('users')
           .where('email', isEqualTo: email)
@@ -37,11 +37,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         return;
       }
 
-      // ✅ สร้างคำร้องใน Firestore
+      // ✅ ส่งคำร้องใน Firestore สำหรับแอดมินตรวจสอบ
       await FirebaseFirestore.instance.collection('password_requests').add({
         'email': email,
         'phone': phone,
-        'newPassword': newPassword,
+        'status': 'pending', // สถานะเริ่มต้น
         'timestamp': Timestamp.now(),
       });
 
@@ -52,6 +52,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     }
   }
 
+  // ฟังก์ชันแสดงหน้าต่างแจ้งเตือน
   void _showDialog(String message) {
     showDialog(
       context: context,
@@ -98,15 +99,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               keyboardType: TextInputType.phone,
               decoration: const InputDecoration(
                 hintText: 'กรอกเบอร์โทรศัพท์',
-              ),
-            ),
-            const SizedBox(height: 20),
-            const Text("New Password", style: TextStyle(fontSize: 16)),
-            TextField(
-              controller: newPasswordController,
-              obscureText: true,
-              decoration: const InputDecoration(
-                hintText: 'รหัสผ่านใหม่ที่ต้องการ',
               ),
             ),
             const SizedBox(height: 40),

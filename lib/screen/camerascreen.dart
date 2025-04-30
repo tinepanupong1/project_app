@@ -164,6 +164,49 @@ class _CameraScreenState extends State<CameraScreen> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('เกิดข้อผิดพลาดในการบันทึกข้อมูล: $e')));
     }
   }
+Future<void> checkAllergyAndSave() async {
+  User? user = FirebaseAuth.instance.currentUser;
+  if (user == null) return;
+
+  // ดึงข้อมูลอาการแพ้จาก Firestore
+  DocumentSnapshot userDoc = await FirebaseFirestore.instance
+      .collection('users')
+      .doc(user.uid)
+      .get();
+
+  List<dynamic> rawAllergies = userDoc['allergies'] ?? [];
+  List<String> allergies = rawAllergies.map((e) => e.toString().toLowerCase()).toList();
+
+  // ตรวจสอบว่ามีวัตถุดิบที่แพ้หรือไม่
+  List<String> allergyIngredients = extractedIngredients.where((ingredient) =>
+      allergies.any((allergy) => ingredient.toLowerCase().contains(allergy))).toList();
+
+  if (allergyIngredients.isNotEmpty) {
+    // แสดงรายการวัตถุดิบที่แพ้โดยไม่มีเครื่องหมาย "-"
+    String allergyText = allergyIngredients.asMap().entries.map((entry) {
+      String ingredient = entry.value.split(":")[0].trim();  // ตัดปริมาณออกจากชื่อ
+      return '${entry.key + 1} $ingredient';  // แสดงแค่ชื่อวัตถุดิบ
+    }).join("\n");
+
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text('แจ้งเตือนการแพ้อาหาร'),
+        content: Text('คุณแพ้วัตถุดิบในอาหาร คือ $allergyText\nไม่สามารถบันทึกได้'),
+        actions: [
+          TextButton(
+            child: Text('ตกลง'),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ],
+      ),
+    );
+  } else {
+    // ถ้าไม่แพ้ → เรียก dialog สำหรับเลือกวันและมื้อ
+    _showFoodDiaryDialog();
+  }
+}
+
 
   // ฟังก์ชันแสดง Dialog สำหรับเลือกวันที่และมื้ออาหาร
   void _showFoodDiaryDialog() {
@@ -375,8 +418,8 @@ class _CameraScreenState extends State<CameraScreen> {
               // ปุ่มเพิ่มลง Food Diary ที่กดแล้วจะเปิด alert
               ElevatedButton(
                 onPressed: () {
-                  _showFoodDiaryDialog();  // เมื่อกดปุ่มจะเปิด dialog สำหรับเลือกวันที่และมื้ออาหาร
-                },
+  checkAllergyAndSave();
+},
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Color(0xFFFF6F6F),
                   padding: EdgeInsets.symmetric(horizontal: 50, vertical: 15),

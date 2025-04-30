@@ -35,6 +35,20 @@ class _MenuScreenState extends State<MenuScreen> {
     cachedImageUrl = widget.imageUrl;
   }
 
+// ฟังก์ชันดึงข้อมูลอาการแพ้จาก Firestore
+Future<List<String>> _getUserAllergies(String userId) async {
+  List<String> allergies = [];
+  try {
+    DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+    if (userDoc.exists) {
+      allergies = List<String>.from(userDoc['allergies'] ?? []);
+    }
+  } catch (e) {
+    print("Error fetching allergies: $e");
+  }
+  return allergies;
+}
+
   void _showFoodDiaryDialog() {
     showDialog(
       context: context,
@@ -167,108 +181,107 @@ class _MenuScreenState extends State<MenuScreen> {
   }
 
   void _saveToFoodDiary(DateTime date, String meal) async {
-    FirebaseFirestore firestore = FirebaseFirestore.instance;
-    FirebaseAuth auth = FirebaseAuth.instance;
+  FirebaseFirestore firestore = FirebaseFirestore.instance;
+  FirebaseAuth auth = FirebaseAuth.instance;
 
-    User? user = auth.currentUser;
-    if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("กรุณาเข้าสู่ระบบก่อนบันทึกข้อมูล")),
-      );
-      return;
-    }
+  User? user = auth.currentUser;
+  if (user == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("กรุณาเข้าสู่ระบบก่อนบันทึกข้อมูล")),
+    );
+    return;
+  }
 
-    String userId = user.uid;
-    String formattedDate = "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+  // ดึงข้อมูลอาการแพ้ของผู้ใช้จาก Firestore
+  List<String> allergies = await _getUserAllergies(user.uid);
 
-    List<String> ingredients = widget.ingredients;
+  print("User Allergies: $allergies"); // ดีบักการดึงข้อมูลแพ้
+  print("Ingredients: ${widget.ingredients}"); // ดีบักส่วนผสมในอาหาร
 
-    if (ingredients.isEmpty) {
-      try {
-        final snapshot = await firestore
-            .collectionGroup('meals')
-            .where('food_name', isEqualTo: widget.foodName)
-            .get();
+  // ตรวจสอบว่าอาหารมีส่วนผสมที่เป็นอันตรายหรือไม่
+  for (String ingredient in widget.ingredients) {
+    // ตัดแค่ชื่อของส่วนผสม (ไม่รวมปริมาณ)
+    String ingredientName = ingredient.split(' ')[0]; 
 
-        if (snapshot.docs.isNotEmpty) {
-          ingredients = List<String>.from(snapshot.docs.first.data()['ingredients'] ?? []);
-        }
-      } catch (e) {
-        print("ไม่พบ ingredients ใน meals: $e");
+    // เปรียบเทียบกับข้อมูล allergies
+    for (var allergy in allergies) {
+      if (ingredientName.contains(allergy)) {
+        // แสดง AlertDialog ถ้ามีส่วนผสมที่แพ้
+        _showAllergyAlert(ingredientName);
+        return; // หยุดการบันทึกเมื่อพบส่วนผสมที่แพ้
       }
-
-      if (ingredients.isEmpty) {
-        try {
-          final snapshot = await firestore
-              .collectionGroup('snacks')
-              .where('food_name', isEqualTo: widget.foodName)
-              .get();
-
-          if (snapshot.docs.isNotEmpty) {
-            ingredients = List<String>.from(snapshot.docs.first.data()['ingredients'] ?? []);
-          }
-        } catch (e) {
-          print("ไม่พบ ingredients ใน snacks: $e");
-        }
-      }
-
-      if (ingredients.isEmpty) {
-        try {
-          final snapshot = await firestore
-              .collectionGroup('rice')
-              .where('food_name', isEqualTo: widget.foodName)
-              .get();
-
-          if (snapshot.docs.isNotEmpty) {
-            ingredients = List<String>.from(snapshot.docs.first.data()['ingredients'] ?? []);
-          }
-        } catch (e) {
-          print("ไม่พบ ingredients ใน rice: $e");
-        }
-      }
-    }
-
-    Map<String, dynamic> newEntry = {
-      'meal': meal,
-      'food': widget.foodName,
-      'calories': widget.calories * plateCount,
-      'image': widget.imageUrl,
-      'ingredients': ingredients,
-    };
-
-    try {
-      DocumentReference diaryRef = firestore
-          .collection("users")
-          .doc(userId)
-          .collection("food_diary")
-          .doc(formattedDate);
-
-      DocumentSnapshot doc = await diaryRef.get();
-
-      if (doc.exists) {
-        await diaryRef.update({
-          "entries": FieldValue.arrayUnion([newEntry])
-        });
-      } else {
-        await diaryRef.set({
-          "entries": [newEntry],
-          "timestamp": FieldValue.serverTimestamp(),
-        });
-      }
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('บันทึก ${widget.foodName} เรียบร้อยแล้ว'),
-          ),
-        );
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('เกิดข้อผิดพลาด: $e')),
-      );
     }
   }
+
+  // ถ้าไม่มีการแพ้ ให้ทำการบันทึกลง Food Diary
+  String userId = user.uid;
+  String formattedDate = "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+
+  Map<String, dynamic> newEntry = {
+    'meal': meal,
+    'food': widget.foodName,
+    'calories': widget.calories * plateCount,
+    'image': widget.imageUrl,
+    'ingredients': widget.ingredients,
+    'timestamp': DateTime.now(),
+  };
+
+  try {
+    DocumentReference diaryRef = firestore
+        .collection("users")
+        .doc(userId)
+        .collection("food_diary")
+        .doc(formattedDate);
+
+    DocumentSnapshot doc = await diaryRef.get();
+
+    if (doc.exists) {
+      await diaryRef.update({
+        "entries": FieldValue.arrayUnion([newEntry])
+      });
+    } else {
+      await diaryRef.set({
+        "entries": [newEntry],
+        "timestamp": FieldValue.serverTimestamp(),
+      });
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('บันทึก ${widget.foodName} เรียบร้อยแล้ว'),
+        ),
+      );
+    }
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('เกิดข้อผิดพลาด: $e')),
+    );
+  }
+}
+
+// ฟังก์ชันแสดงการแจ้งเตือนเมื่อพบการแพ้
+void _showAllergyAlert(String ingredient) {
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: Text('เแจ้งเตือนการแพ้อาหาร'),
+        content: Text('คุณแพ้วัตถุดิบในอาหาร คือ\n $ingredient \nไม่สามารถบันทึกได้'),
+        actions: [
+          TextButton(
+            child: Text('ตกลง'),
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+          ),
+        ],
+      );
+    },
+  );
+}
+
+
 
   @override
   Widget build(BuildContext context) {
