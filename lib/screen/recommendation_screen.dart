@@ -219,7 +219,7 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
             title: const Text('พบแผนวันนี้'),
             content: const Text('ดูแผนเดิมหรือสร้างใหม่?'),
             actions: [
-              TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('ดูเดิม')),
+              TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('ดูแผนเดิม')),
               TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('สร้างใหม่')),
             ],
           ),

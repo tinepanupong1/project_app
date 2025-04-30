@@ -9,7 +9,7 @@ import 'package:project_app/screen/goal_screen.dart';
 import 'package:project_app/screen/loginscreen.dart';
 import 'package:project_app/screen/recommendation_screen.dart';
 import 'package:project_app/screen/planmenuscreen.dart';
-import 'package:project_app/screen/waterscreen.dart';
+import 'package:project_app/screen/waterscreen.dart'; 
 import 'fooddiaryscreen.dart';
 import 'package:project_app/screen/notification.dart';
 
@@ -285,6 +285,7 @@ class MenuPlanCardToday extends StatefulWidget {
 }
 
 class _MenuPlanCardTodayState extends State<MenuPlanCardToday> {
+  // เก็บชื่อเมนูแต่ละมื้อ
   Map<String, String?> _todayPlan = {
     'breakfast': null,
     'lunch': null,
@@ -301,6 +302,7 @@ class _MenuPlanCardTodayState extends State<MenuPlanCardToday> {
     fetchTodayPlan();
   }
 
+  // สร้าง ID เอกสารแบบ "day-month-year"
   String get todayDocId {
     final now = DateTime.now();
     return '${now.day}-${now.month}-${now.year}';
@@ -308,43 +310,68 @@ class _MenuPlanCardTodayState extends State<MenuPlanCardToday> {
 
   Future<void> fetchTodayPlan() async {
     if (_uid == null) return;
-    final doc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(_uid)
-        .collection('meal_plans')
-        .doc(todayDocId)
-        .get();
 
-    if (doc.exists) {
-      final data = doc.data();
-      if (data != null && data['meals'] is Map) {
-        final meals = Map<String, dynamic>.from(data['meals']);
-        setState(() {
-          _todayPlan = meals.map((k, v) => MapEntry(k, v?.toString()));
-          _loading = false;
-        });
+    // เริ่ม loading
+    setState(() => _loading = true);
+
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_uid)
+          .collection('meal_plans')
+          .doc(todayDocId)
+          .get();
+
+      // ถ้าไม่มีเอกสาร ก็เลิกโหลด
+      if (!doc.exists || doc.data() == null) {
+        setState(() => _loading = false);
+        return;
       }
-    } else {
+
+      final data = doc.data()!;
+      // อ่าน list ของ recommendations (แต่ละ element เป็น Map<String,dynamic>)
+      final recs = List<Map<String, dynamic>>.from(data['recommendations'] ?? []);
+
+      setState(() {
+        // มื้อเช้า
+        _todayPlan['breakfast'] =
+            recs.isNotEmpty ? recs[0]['food_name'] as String? : null;
+        // มื้อกลางวัน
+        _todayPlan['lunch'] =
+            recs.length > 1 ? recs[1]['food_name'] as String? : null;
+        // มื้อเย็น
+        _todayPlan['dinner'] =
+            recs.length > 2 ? recs[2]['food_name'] as String? : null;
+        // ของว่าง (ถ้ามี includeSnacks=true และ recs.length>3)
+        _todayPlan['snacks'] = (data['includeSnacks'] == true && recs.length > 3)
+            ? recs[3]['food_name'] as String?
+            : null;
+
+        _loading = false;
+      });
+    } catch (e) {
+      print('fetchTodayPlan error: $e');
       setState(() => _loading = false);
     }
   }
 
-  Widget _buildSlot(String slot, String label) {
-    final food = _todayPlan[slot];
+  Widget _buildSlot(String slotKey, String label) {
+    final food = _todayPlan[slotKey];
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [
+        boxShadow: const [
           BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 4))
         ],
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(fontWeight: FontWeight.bold)),
-          Text(food ?? 'ยังไม่เลือกเมนู', style: TextStyle(color: Colors.grey[700]))
+          Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+          Text(food ?? 'ยังไม่เลือกเมนู',
+              style: TextStyle(color: Colors.grey[700])),
         ],
       ),
     );
@@ -355,28 +382,35 @@ class _MenuPlanCardTodayState extends State<MenuPlanCardToday> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // หัวข้อ + ปุ่มแก้ไข
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('เมนูวันนี้',
+            const Text('เมนูวันนี้',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             TextButton.icon(
-              icon: Icon(Icons.edit_note),
-              label: Text('วางแผนเมนู'),
+              icon: const Icon(Icons.edit_note),
+              label: const Text('วางแผนเมนู'),
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => RecommendationScreen(userId: _uid!),
-                  ),
-                );
+                // นำไปสู่หน้าวางแผน
+                if (_uid != null) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          RecommendationScreen(userId: _uid!),
+                    ),
+                  );
+                }
               },
-            )
+            ),
           ],
         ),
         const SizedBox(height: 10),
+
+        // ถ้ายัง loading ให้ spinner
         if (_loading)
-          Center(child: CircularProgressIndicator())
+          const Center(child: CircularProgressIndicator())
         else ...[
           _buildSlot('breakfast', 'มื้อเช้า'),
           const SizedBox(height: 10),
@@ -385,7 +419,7 @@ class _MenuPlanCardTodayState extends State<MenuPlanCardToday> {
           _buildSlot('dinner', 'มื้อเย็น'),
           const SizedBox(height: 10),
           _buildSlot('snacks', 'ของว่าง'),
-        ]
+        ],
       ],
     );
   }
