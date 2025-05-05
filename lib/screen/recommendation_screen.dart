@@ -73,12 +73,11 @@ class RecommendationService {
   }
 
   double _percentSuitability(double cal, double budget) {
-  if (budget <= 0) return 0.0;
-  final diffRatio = (cal - budget) / budget;
-  final score = exp(-pow(diffRatio, 2));
-  return score * 100;
-}
-
+    if (budget <= 0) return 0.0;
+    final diffRatio = (cal - budget) / budget;
+    final score = exp(-pow(diffRatio, 2));
+    return score * 100;
+  }
 
   List<Menu> _pickOne(
     List<Menu> source,
@@ -149,7 +148,10 @@ class RecommendationService {
     bool filterDisease(Menu m) {
       if (diseaseKey == 'Hypertension') {
         final forb = [
-          'เกลือ','น้ำปลา','ซีอิ๊ว','ไส้กรอก',
+          'เกลือ',
+          'น้ำปลา',
+          'ซีอิ๊ว',
+          'ไส้กรอก',
           'กุนเชียง',
           'อาหารกระป๋อง',
           'ผักกาดดอง',
@@ -276,12 +278,15 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
             map['ingredients'] = _toStringList(m['ingredients']);
             return map;
           }).toList();
-          final used = recs.fold<double>(
-              0, (sum, m) => sum + ((m['calories'] as num?)?.toDouble() ?? 0));
+
+          // ตั้งค่า _selectedMeals ตามค่าที่บันทึกไว้
+          final numMeals =
+              planDoc.data()?['numMeals'] ?? 3; // ใช้ค่า numMeals ที่บันทึก
           setState(() {
-            // อัปเดตให้ใช้ filtered picks และ remaining ใหม่
             _picks = recs;
-            _remaining -= used;
+            _selectedMeals = numMeals; // อัปเดตจำนวนมื้อที่เลือก
+            _remaining -= recs.fold<double>(0,
+                (sum, m) => sum + ((m['calories'] as num?)?.toDouble() ?? 0));
             _loading = false;
           });
           return;

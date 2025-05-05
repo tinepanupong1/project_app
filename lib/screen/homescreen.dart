@@ -286,12 +286,7 @@ class MenuPlanCardToday extends StatefulWidget {
 
 class _MenuPlanCardTodayState extends State<MenuPlanCardToday> {
   // เก็บชื่อเมนูแต่ละมื้อ
-  Map<String, String?> _todayPlan = {
-    'breakfast': null,
-    'lunch': null,
-    'dinner': null,
-    'snacks': null,
-  };
+  Map<String, String?> _todayPlan = {};
   bool _loading = true;
   String? _uid;
 
@@ -333,19 +328,21 @@ class _MenuPlanCardTodayState extends State<MenuPlanCardToday> {
       final recs = List<Map<String, dynamic>>.from(data['recommendations'] ?? []);
 
       setState(() {
-        // มื้อเช้า
-        _todayPlan['breakfast'] =
-            recs.isNotEmpty ? recs[0]['food_name'] as String? : null;
-        // มื้อกลางวัน
-        _todayPlan['lunch'] =
-            recs.length > 1 ? recs[1]['food_name'] as String? : null;
-        // มื้อเย็น
-        _todayPlan['dinner'] =
-            recs.length > 2 ? recs[2]['food_name'] as String? : null;
-        // ของว่าง (ถ้ามี includeSnacks=true และ recs.length>3)
-        _todayPlan['snacks'] = (data['includeSnacks'] == true && recs.length > 3)
-            ? recs[3]['food_name'] as String?
-            : null;
+        // เพิ่มเมนูในรูปแบบ "มื้อที่ 1, 2, 3..."
+        for (int i = 0; i < recs.length; i++) {
+          final menu = recs[i];
+          final slot = menu['slot'] ?? '';
+
+          // เพิ่มมื้ออาหารตามลำดับ
+          if (slot == 'meals') {
+            _todayPlan['meal_${i + 1}'] = menu['food_name'];
+          }
+        }
+
+        // ถ้ามีของว่าง (snacks)
+        if (data['includeSnacks'] == true && recs.length > 3) {
+          _todayPlan['snacks'] = recs[3]['food_name'];
+        }
 
         _loading = false;
       });
@@ -355,8 +352,7 @@ class _MenuPlanCardTodayState extends State<MenuPlanCardToday> {
     }
   }
 
-  Widget _buildSlot(String slotKey, String label) {
-    final food = _todayPlan[slotKey];
+  Widget _buildSlot(String label, String? foodName) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -370,8 +366,7 @@ class _MenuPlanCardTodayState extends State<MenuPlanCardToday> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
-          Text(food ?? 'ยังไม่เลือกเมนู',
-              style: TextStyle(color: Colors.grey[700])),
+          Text(foodName ?? 'ยังไม่เลือกเมนู', style: TextStyle(color: Colors.grey[700])),
         ],
       ),
     );
@@ -412,18 +407,20 @@ class _MenuPlanCardTodayState extends State<MenuPlanCardToday> {
         if (_loading)
           const Center(child: CircularProgressIndicator())
         else ...[
-          _buildSlot('breakfast', 'มื้อเช้า'),
-          const SizedBox(height: 10),
-          _buildSlot('lunch', 'มื้อกลางวัน'),
-          const SizedBox(height: 10),
-          _buildSlot('dinner', 'มื้อเย็น'),
-          const SizedBox(height: 10),
-          _buildSlot('snacks', 'ของว่าง'),
+          // แสดงเมนูเป็นมื้อที่ 1, 2, 3 ตามลำดับ
+          for (int i = 1; i < _todayPlan.length; i++) ...[
+            _buildSlot('มื้อที่ ${i} ', _todayPlan['meal_${i}']),
+            const SizedBox(height: 10),
+          ],
+          // แสดงของว่างถ้ามี
+          if (_todayPlan.containsKey('snacks'))
+            _buildSlot('ของว่าง ', _todayPlan['snacks']),
         ],
       ],
     );
   }
 }
+
 
 class GoalAndDiaryRow extends StatelessWidget {
   final VoidCallback onDiaryBack;
