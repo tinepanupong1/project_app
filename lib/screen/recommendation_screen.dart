@@ -8,7 +8,12 @@ typedef Menu = Map<String, dynamic>;
 /// แปลง dynamic (String หรือ List) → List<String>
 List<String> _toStringList(dynamic raw) {
   if (raw is List) return raw.map((e) => e.toString()).toList();
-  if (raw is String) return raw.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
+  if (raw is String)
+    return raw
+        .split(',')
+        .map((s) => s.trim())
+        .where((s) => s.isNotEmpty)
+        .toList();
   return [];
 }
 
@@ -68,11 +73,12 @@ class RecommendationService {
   }
 
   double _percentSuitability(double cal, double budget) {
-    if (budget <= 0) return 0.0;
-    final diff = (cal - budget) / budget;
-    final score = 1 - diff * diff;
-    return (score < 0 ? 0 : score) * 100;
-  }
+  if (budget <= 0) return 0.0;
+  final diffRatio = (cal - budget) / budget;
+  final score = exp(-pow(diffRatio, 2));
+  return score * 100;
+}
+
 
   List<Menu> _pickOne(
     List<Menu> source,
@@ -83,7 +89,9 @@ class RecommendationService {
   ) {
     final cand = source.where((m) {
       final ings = _toStringList(m['ingredients']);
-      if (allergies.any((a) => ings.any((i) => i.toLowerCase().contains(a.toLowerCase())))) return false;
+      if (allergies.any(
+          (a) => ings.any((i) => i.toLowerCase().contains(a.toLowerCase()))))
+        return false;
       if (!filterDisease(m)) return false;
       return true;
     }).map((m) {
@@ -95,7 +103,8 @@ class RecommendationService {
       };
     }).toList();
 
-    cand.sort((a, b) => (b['percent'] as double).compareTo(a['percent'] as double));
+    cand.sort(
+        (a, b) => (b['percent'] as double).compareTo(a['percent'] as double));
     if (cand.isEmpty) return [];
     final top20 = cand.take(20).toList()..shuffle(Random(seed));
     return [top20.first];
@@ -109,8 +118,8 @@ class RecommendationService {
     int? overrideSeed,
   }) async {
     final profile = await _fetchUserProfile();
-        final rawGoal    = profile?['goalType'] as String?;
-    final rawDisease = profile?['disease']  as String?;
+    final rawGoal = profile?['goalType'] as String?;
+    final rawDisease = profile?['disease'] as String?;
 
     const goalMap = {
       'ลดน้ำหนัก': 'lose weight',
@@ -122,54 +131,87 @@ class RecommendationService {
       'โรคอ้วน': 'Obesity',
       'โรคไต': 'kidney disease',
     };
-    // ถ้า user profile ไม่มีหรือไม่ได้ตั้งค่า ให้ fetch ทุกเมนู
-    final goalKey = rawGoal != null && goalMap.containsKey(rawGoal)
-        ? goalMap[rawGoal]
-        : null;
-    final diseaseKey = rawDisease != null && diseaseMap.containsKey(rawDisease)
-        ? diseaseMap[rawDisease]
-        : null;
 
-    final goalMenus    = await _fetchGoalMenus(goalKey);
+    final goalKey = goalMap[rawGoal];
+    final diseaseKey = diseaseMap[rawDisease];
+
+    final goalMenus = await _fetchGoalMenus(goalKey);
     final diseaseMenus = await _fetchDiseaseMenus(diseaseKey);
-    final allMenus     = [...goalMenus, ...diseaseMenus];
+    final allMenus = [...goalMenus, ...diseaseMenus];
 
-    final mealSource  = allMenus.where((m) => m['slot'] != 'snacks').toList();
+    final mealSource = allMenus.where((m) => m['slot'] != 'snacks').toList();
     final snackSource = allMenus.where((m) => m['slot'] == 'snacks').toList();
 
-    // กรอง allergies ที่เป็นค่าว่างออก
-    final allergies = _toStringList(profile?['allergies']).where((a) => a.isNotEmpty).toList();
+    final allergies = _toStringList(profile?['allergies'])
+        .where((a) => a.isNotEmpty)
+        .toList();
+
     bool filterDisease(Menu m) {
       if (diseaseKey == 'Hypertension') {
-        final forb = ['เกลือ','น้ำปลา','ซีอิ๊ว','ไส้กรอก','กุนเชียง','อาหารกระป๋อง','ผักกาดดอง','ไข่เค็ม','กุ้งแห้ง','ปลาเค็ม'];
-        return !_toStringList(m['ingredients']).any((i) => forb.any((kw) => i.contains(kw)));
+        final forb = [
+          'เกลือ','น้ำปลา','ซีอิ๊ว','ไส้กรอก',
+          'กุนเชียง',
+          'อาหารกระป๋อง',
+          'ผักกาดดอง',
+          'ไข่เค็ม',
+          'กุ้งแห้ง',
+          'ปลาเค็ม'
+        ];
+        return !_toStringList(m['ingredients'])
+            .any((i) => forb.any((kw) => i.contains(kw)));
       } else if (diseaseKey == 'kidney disease') {
-        final forb = ['เนื้อหมู','เครื่องใน','กะทิ','กล้วย','ฝรั่ง','มะละกอ','ถั่ว' ];//โปรตีน/ไขมันสูง โพแทสเซียมสูง
-        return !_toStringList(m['ingredients']).any((i) => forb.any((kw) => i.contains(kw)));
+        final forb = [
+          'เนื้อหมู',
+          'เครื่องใน',
+          'กะทิ',
+          'กล้วย',
+          'ฝรั่ง',
+          'มะละกอ',
+          'ถั่ว'
+        ];
+        return !_toStringList(m['ingredients'])
+            .any((i) => forb.any((kw) => i.contains(kw)));
       }
       return true;
     }
 
-    final totalSlots = nMeals + (includeSnacks ? nSnacks : 0);
-    final budget = dailyTarget / (totalSlots > 0 ? totalSlots : 1);
-    final seed   = overrideSeed ?? DateTime.now().millisecondsSinceEpoch;
-
+    final seed = overrideSeed ?? DateTime.now().millisecondsSinceEpoch;
     final picks = <Menu>[];
-    for (var i = 0; i < nMeals; i++) {
-      picks.addAll(_pickOne(mealSource, budget, filterDisease, allergies, seed ^ i));
-    }
-    if (includeSnacks) {
-      for (var j = 0; j < nSnacks; j++) {
-        picks.addAll(_pickOne(snackSource, budget, filterDisease, allergies, seed ^ (100 + j)));
+
+    // ถ้าเลือก 3 มื้อหลัก ให้ใช้สัดส่วน (25%, 35%, 30%)
+    if (nMeals == 3) {
+      final mealRatios = [0.25, 0.35, 0.30];
+      for (var i = 0; i < 3; i++) {
+        final budget = dailyTarget * mealRatios[i];
+        picks.addAll(
+            _pickOne(mealSource, budget, filterDisease, allergies, seed ^ i));
+      }
+    } else {
+      // ถ้าไม่ใช่ 3 มื้อหลัก ให้หาร 90% ของพลังงานเท่า ๆ กัน
+      final mealBudget = dailyTarget * 0.90 / nMeals;
+      for (var i = 0; i < nMeals; i++) {
+        picks.addAll(_pickOne(
+            mealSource, mealBudget, filterDisease, allergies, seed ^ i));
       }
     }
+
+    // แนะนำของว่าง 10%
+    if (includeSnacks) {
+      final snackBudget = dailyTarget * 0.10 / nSnacks;
+      for (var j = 0; j < nSnacks; j++) {
+        picks.addAll(_pickOne(snackSource, snackBudget, filterDisease,
+            allergies, seed ^ (100 + j)));
+      }
+    }
+
     return picks;
   }
 }
 
 class RecommendationScreen extends StatefulWidget {
   final String userId;
-  const RecommendationScreen({Key? key, required this.userId}) : super(key: key);
+  const RecommendationScreen({Key? key, required this.userId})
+      : super(key: key);
 
   @override
   _RecommendationScreenState createState() => _RecommendationScreenState();
@@ -203,11 +245,11 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
 
     final dateId = DateFormat('d-M-yyyy').format(DateTime.now());
     final planDoc = await _db
-      .collection('users')
-      .doc(widget.userId)
-      .collection('meal_plans')
-      .doc(dateId)
-      .get();
+        .collection('users')
+        .doc(widget.userId)
+        .collection('meal_plans')
+        .doc(dateId)
+        .get();
 
     if (planDoc.exists && !forceNew) {
       final raw = planDoc.data()!['recommendations'];
@@ -219,8 +261,12 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
             title: const Text('พบแผนวันนี้'),
             content: const Text('ดูแผนเดิมหรือสร้างใหม่?'),
             actions: [
-              TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('ดูแผนเดิม')),
-              TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('สร้างใหม่')),
+              TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(true),
+                  child: const Text('ดูแผนเดิม')),
+              TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(false),
+                  child: const Text('สร้างใหม่')),
             ],
           ),
         );
@@ -230,8 +276,10 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
             map['ingredients'] = _toStringList(m['ingredients']);
             return map;
           }).toList();
-          final used = recs.fold<double>(0, (sum, m) => sum + ((m['calories'] as num?)?.toDouble() ?? 0));
-          setState(() { // อัปเดตให้ใช้ filtered picks และ remaining ใหม่
+          final used = recs.fold<double>(
+              0, (sum, m) => sum + ((m['calories'] as num?)?.toDouble() ?? 0));
+          setState(() {
+            // อัปเดตให้ใช้ filtered picks และ remaining ใหม่
             _picks = recs;
             _remaining -= used;
             _loading = false;
@@ -249,7 +297,8 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
       nSnacks: 1,
       overrideSeed: seed,
     );
-    final used = picks.fold<double>(0, (sum, m) => sum + ((m['calories'] as num?)?.toDouble() ?? 0));
+    final used = picks.fold<double>(
+        0, (sum, m) => sum + ((m['calories'] as num?)?.toDouble() ?? 0));
     // ตัดรายการออกจนไม่เกินงบพลังงาน
     var filtered = List<Menu>.from(picks);
     var totalCalories = used;
@@ -271,20 +320,21 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
     final dateId = DateFormat('d-M-yyyy').format(DateTime.now());
     final totalUsed = (_tdee - _remaining).toStringAsFixed(0);
     await _db
-      .collection('users')
-      .doc(widget.userId)
-      .collection('meal_plans')
-      .doc(dateId)
-      .set({
-        'date': dateId,
-        'numMeals': _selectedMeals,
-        'includeSnacks': _includeSnacks,
-        'recommendations': _picks,
-        'total_used': totalUsed,
-        'remaining': _remaining.toStringAsFixed(0),
-        'timestamp': FieldValue.serverTimestamp(),
-      });
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('บันทึกเรียบร้อย')));
+        .collection('users')
+        .doc(widget.userId)
+        .collection('meal_plans')
+        .doc(dateId)
+        .set({
+      'date': dateId,
+      'numMeals': _selectedMeals,
+      'includeSnacks': _includeSnacks,
+      'recommendations': _picks,
+      'total_used': totalUsed,
+      'remaining': _remaining.toStringAsFixed(0),
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('บันทึกเรียบร้อย')));
     setState(() => _hasSaved = true);
   }
 
@@ -299,7 +349,8 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
     final pct = (m['percent'] as double?)?.toStringAsFixed(1) ?? '0.0';
     final ing = (m['ingredients'] as List<String>).join(', ');
     final isSnack = _includeSnacks && index >= _selectedMeals;
-    final label = isSnack ? 'ของว่าง ${index - _selectedMeals + 1}' : 'มื้อ ${index + 1}';
+    final label =
+        isSnack ? 'ของว่าง ${index - _selectedMeals + 1}' : 'มื้อ ${index + 1}';
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
@@ -310,10 +361,13 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
           if (img != null && img.isNotEmpty)
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              child: Image.network(img, height: 140, width: double.infinity, fit: BoxFit.cover),
+              child: Image.network(img,
+                  height: 140, width: double.infinity, fit: BoxFit.cover),
             ),
           const SizedBox(height: 8),
-          Text(label, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          Text(label,
+              style:
+                  const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           const SizedBox(height: 4),
           Text(m['food_name'] ?? '', style: const TextStyle(fontSize: 15)),
           const SizedBox(height: 4),
@@ -322,8 +376,12 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
           Row(children: [
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(color: _percentColor(double.parse(pct)), borderRadius: BorderRadius.circular(4)),
-              child: Text('$pct%', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              decoration: BoxDecoration(
+                  color: _percentColor(double.parse(pct)),
+                  borderRadius: BorderRadius.circular(4)),
+              child: Text('$pct%',
+                  style: const TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold)),
             ),
             const SizedBox(width: 8),
             Expanded(
@@ -342,7 +400,8 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('วางแผน $_selectedMeals มื้อ${_includeSnacks ? ' + ของว่าง' : ''}'),
+        title: Text(
+            'วางแผน $_selectedMeals มื้อ${_includeSnacks ? ' + ของว่าง' : ''}'),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -361,7 +420,8 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
                   DropdownButton<int>(
                     value: _selectedMeals,
                     items: [2, 3, 4, 5, 6]
-                        .map((n) => DropdownMenuItem(value: n, child: Text('$n มื้อ')))
+                        .map((n) =>
+                            DropdownMenuItem(value: n, child: Text('$n มื้อ')))
                         .toList(),
                     onChanged: (n) {
                       if (n != null) {
@@ -385,7 +445,8 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 child: Text(
                   'พลังงานคงเหลือ: ${_remaining.toStringAsFixed(0)} kcal',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),
               Expanded(
