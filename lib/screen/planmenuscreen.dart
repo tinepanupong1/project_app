@@ -1,212 +1,169 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:http/http.dart' as http;
 
 class PlanMenuScreen extends StatefulWidget {
+  final String userId;
+
+  const PlanMenuScreen({
+    Key? key,
+    required this.userId,
+  }) : super(key: key);
+
   @override
   _PlanMenuScreenState createState() => _PlanMenuScreenState();
 }
 
 class _PlanMenuScreenState extends State<PlanMenuScreen> {
-  List<Map<String, dynamic>> menus = [];
+  static const apiBase = 'http://10.0.2.2:5000';
+
+  bool _loading = true;
+  Map<String, List<dynamic>> _menus = {};
+  Map<String, String?> _selectedMenus = {
+    'breakfast': null,
+    'lunch': null,
+    'dinner': null,
+    'snacks': null,
+  };
+
+  final Map<String, String> slotLabels = {
+    'breakfast': 'เช้า',
+    'lunch': 'กลางวัน',
+    'dinner': 'เย็น',
+    'snacks': 'ของว่าง',
+  };
+
+  late String _selectedDay;
 
   @override
   void initState() {
     super.initState();
-    fetchMenus();
+    _selectedDay = _todayLabel();
+    _fetchRecommendations();
   }
 
-  Future<void> fetchMenus() async {
-    FirebaseFirestore firestore = FirebaseFirestore.instance;
-    // ดึงข้อมูลเมนูตามโรค เช่น Hypertension
-    CollectionReference diseaseCollection = firestore.collection('disease');
-    DocumentSnapshot documentSnapshot = await diseaseCollection.doc('Hypertension').get();
+  String _todayLabel() {
+    final now = DateTime.now();
+    return '${now.day}/${now.month}/${now.year}';
+  }
 
-    if (documentSnapshot.exists) {
-      Map<String, dynamic>? data = documentSnapshot.data() as Map<String, dynamic>?;
-      if (data != null && data.containsKey('meals')) {
-        List<dynamic> meals = data['meals'];
-        setState(() {
-          menus = meals.map((meal) => meal as Map<String, dynamic>).toList();
-        });
-      }
+  Future<void> _fetchRecommendations() async {
+    setState(() => _loading = true);
+
+    final resp = await http.post(
+      Uri.parse('$apiBase/recommend'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'user_id': widget.userId,
+        'top_n_meals': 3,
+        'top_n_snacks': 3
+      }),
+    );
+
+    if (resp.statusCode == 200) {
+      final json = jsonDecode(resp.body);
+      final data = json['recommendations'] as Map<String, dynamic>;
+      setState(() {
+        _menus = data.map((k, v) => MapEntry(k, List<dynamic>.from(v)));
+        _loading = false;
+      });
+    } else {
+      setState(() => _loading = false);
     }
+  }
+
+  void _selectMenu(String slot) async {
+    final choices = _menus[slot] ?? [];
+    final selected = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('เลือกเมนู ${slotLabels[slot]}'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView(
+            children: choices.map((m) => ListTile(
+              title: Text(m['food_name']),
+              subtitle: Text('${m['calories']} kcal - ${m['percent']}%'),
+              onTap: () => Navigator.pop(ctx, m['food_name']),
+            )).toList(),
+          ),
+        ),
+      ),
+    );
+    if (selected != null) {
+      setState(() => _selectedMenus[slot] = selected);
+    }
+  }
+
+  Future<void> _savePlan() async {
+    final body = {
+      'user_id': widget.userId,
+      'plan': {
+        _selectedDay: _selectedMenus,
+      }
+    };
+    final resp = await http.post(
+      Uri.parse('$apiBase/meal_plans'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(body),
+    );
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(resp.statusCode == 200 ? 'บันทึกแผนสำเร็จ' : 'บันทึกไม่สำเร็จ'),
+    ));
+  }
+
+  void _resetMenus() {
+    setState(() {
+      _selectedMenus = {
+        'breakfast': null,
+        'lunch': null,
+        'dinner': null,
+        'snacks': null,
+      };
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFFFF7EB),
-      appBar: AppBar(
-        title: const Text('Menu Planning', style: TextStyle(color: Colors.black)),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        centerTitle: true,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Column(
-          children: [
-            // แสดงรายการเมนู
-            menus.isEmpty
-                ? Center(child: CircularProgressIndicator())
-                : GridView.builder(
-                    shrinkWrap: true,
-                    physics: NeverScrollableScrollPhysics(),
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      childAspectRatio: 0.8,
-                      crossAxisSpacing: 10,
-                      mainAxisSpacing: 10,
-                    ),
-                    itemCount: menus.length,
-                    itemBuilder: (context, index) {
-                      final menu = menus[index];
-                      return MenuCard(
-                        imageUrl: menu['imageUrl'], // URL ของรูปเมนู
-                        title: menu['title'], // ชื่อเมนู
-                        calories: menu['calories'], // แคลอรี่
-                        ingredients: menu['ingredients'], // ส่วนประกอบ
-                      );
-                    },
-                  ),
-            const SizedBox(height: 20),
-            // ระบบวางแผนเมนู (Drag-and-drop หรือ select)
-            PlanningGrid(),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class MenuCard extends StatelessWidget {
-  final String imageUrl;
-  final String title;
-  final int calories;
-  final List<String> ingredients;
-
-  const MenuCard({
-    Key? key,
-    required this.imageUrl,
-    required this.title,
-    required this.calories,
-    required this.ingredients,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(8.0),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.5),
-            spreadRadius: 2,
-            blurRadius: 5,
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Image.network(
-            imageUrl,
-            width: double.infinity,
-            height: 100,
-            fit: BoxFit.cover,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            title,
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-          ),
-          Text("Calories: $calories kcal"),
-          const SizedBox(height: 8),
-          Text(
-            'Ingredients: ${ingredients.join(", ")}',
-            style: TextStyle(fontSize: 12, color: Colors.grey[700]),
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class PlanningGrid extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text("มิถุนายน 2567", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 10),
-        Container(
-          padding: const EdgeInsets.all(8.0),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(10),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.5),
-                spreadRadius: 2,
-                blurRadius: 5,
-              ),
-            ],
-          ),
-          child: Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      appBar: AppBar(title: const Text('วางแผนเมนู')),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  DayMenuColumn(day: 'จันทร์ 10', meals: ["เช้า", "เที่ยง", "เย็น"]),
-                  DayMenuColumn(day: 'อังคาร 11', meals: ["เช้า", "เที่ยง", "เย็น"]),
-                  DayMenuColumn(day: 'พุธ 12', meals: ["เช้า", "เที่ยง", "เย็น"]),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('วันที่: $_selectedDay', style: const TextStyle(fontWeight: FontWeight.bold)),
+                      IconButton(
+                        icon: const Icon(Icons.refresh),
+                        tooltip: 'รีเฟรชเมนูแนะนำ',
+                        onPressed: () async {
+                          await _fetchRecommendations();
+                          _resetMenus();
+                        },
+                      )
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  ..._selectedMenus.entries.map((entry) => ListTile(
+                        title: Text(slotLabels[entry.key]!),
+                        subtitle: Text(entry.value ?? 'ยังไม่เลือกเมนู'),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => _selectMenu(entry.key),
+                      )),
+                  const Spacer(),
+                  ElevatedButton.icon(
+                    onPressed: _savePlan,
+                    icon: const Icon(Icons.save),
+                    label: const Text('บันทึกแผนวันนี้'),
+                  )
                 ],
               ),
-              const SizedBox(height: 10),
-              ElevatedButton(
-                onPressed: () {
-                  // Implement save planning logic here
-                },
-                child: Text("บันทึกแผน"),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class DayMenuColumn extends StatelessWidget {
-  final String day;
-  final List<String> meals;
-
-  const DayMenuColumn({Key? key, required this.day, required this.meals}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(day, style: TextStyle(fontWeight: FontWeight.bold)),
-        ...meals.map((meal) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4.0),
-            child: Container(
-              padding: EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.orange.shade100,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Center(child: Text(meal)),
             ),
-          );
-        }).toList(),
-      ],
     );
   }
 }

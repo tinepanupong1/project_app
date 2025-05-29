@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:project_app/screen/homescreen.dart';
 import 'package:project_app/screen/loginscreen.dart';
+import 'package:project_app/screen/recommendation_test_screen.dart';
 import 'package:project_app/screen/selectactivity.dart';
 import 'package:project_app/screen/selectinfo.dart';
 import 'package:project_app/screen/tinescreen.dart';
@@ -39,7 +40,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primaryColor: Colors.blue,
       ),
-      home : TineScreen (),
+      home : LoginScreen()
     );
   }
 }
